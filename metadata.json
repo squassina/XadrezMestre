@@ -1,0 +1,6 @@
+{
+  "name": "XadrezMestre - Treinador Tático & Análise em Tempo Real",
+  "description": "Treinador de xadrez inteligente com análise de partidas lance a lance, feedback imediato sobre erros comuns e exercícios táticos personalizados.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
