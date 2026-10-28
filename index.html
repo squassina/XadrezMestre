@@ -3,55 +3,6 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <script>
-      (function() {
-        try {
-          const OriginalWebSocket = window.WebSocket;
-          if (OriginalWebSocket) {
-            const PatchedWebSocket = function(url, protocols) {
-              const isHmr = protocols === 'vite-hmr' || 
-                (typeof protocols === 'string' && protocols.includes('vite-hmr')) || 
-                (Array.isArray(protocols) && protocols.includes('vite-hmr')) ||
-                (typeof url === 'string' && url.includes('token='));
-              
-              if (isHmr) {
-                const target = new EventTarget();
-                target.url = url;
-                target.readyState = 1;
-                target.CONNECTING = 0;
-                target.OPEN = 1;
-                target.CLOSING = 2;
-                target.CLOSED = 3;
-                target.send = function() {};
-                target.close = function() {};
-                Object.setPrototypeOf(target, PatchedWebSocket.prototype);
-                setTimeout(function() {
-                  target.dispatchEvent(new Event('open'));
-                }, 0);
-                return target;
-              }
-              return new OriginalWebSocket(url, protocols);
-            };
-            PatchedWebSocket.prototype = OriginalWebSocket.prototype;
-            PatchedWebSocket.CONNECTING = 0;
-            PatchedWebSocket.OPEN = 1;
-            PatchedWebSocket.CLOSING = 2;
-            PatchedWebSocket.CLOSED = 3;
-            window.WebSocket = PatchedWebSocket;
-          }
-        } catch (_) {}
-
-        window.addEventListener('unhandledrejection', function(e) {
-          if (e && e.reason && (
-            (typeof e.reason.message === 'string' && e.reason.message.includes('WebSocket')) ||
-            (typeof e.reason.stack === 'string' && (e.reason.stack.includes('@vite/client') || e.reason.stack.includes('createWebSocketModuleRunnerTransport')))
-          )) {
-            e.preventDefault();
-            e.stopImmediatePropagation();
-          }
-        });
-      })();
-    </script>
     <title>XadrezMestre - Treinador Tático & Análise em Tempo Real</title>
     <meta name="description" content="Treinador de xadrez inteligente com análise de partidas lance a lance, feedback imediato sobre erros comuns e exercícios táticos personalizados." />
     <meta property="og:title" content="XadrezMestre - Treinador Tático & Análise em Tempo Real" />
@@ -64,7 +15,6 @@
   </head>
   <body class="bg-slate-950 text-slate-100 antialiased selection:bg-amber-500/30 selection:text-amber-200">
     <div id="root"></div>
-    <script type="module" src="./src/main.tsx"></script>
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-
