@@ -30,8 +30,12 @@ export const MoveHistory: React.FC<MoveHistoryProps> = ({
     }
   }, [moves.length]);
 
-  const getQualityBadge = (quality: MoveQuality) => {
-    switch (quality) {
+  const getQualityBadge = (move?: AnalyzedMove) => {
+    if (!move) return null;
+    if (move.isBookMove) {
+      return <span className="text-[10px] font-bold text-sky-400 font-mono" title="Livro Teórico de Aberturas">📖</span>;
+    }
+    switch (move.quality) {
       case 'brilliant':
         return <span className="text-[10px] font-bold text-cyan-400 font-mono">!!</span>;
       case 'best':
@@ -135,7 +139,7 @@ export const MoveHistory: React.FC<MoveHistoryProps> = ({
                   }`}
                 >
                   <span>{pair.white.san}</span>
-                  {getQualityBadge(pair.white.quality)}
+                  {getQualityBadge(pair.white)}
                 </button>
               )}
 
@@ -150,7 +154,7 @@ export const MoveHistory: React.FC<MoveHistoryProps> = ({
                   }`}
                 >
                   <span>{pair.black.san}</span>
-                  {getQualityBadge(pair.black.quality)}
+                  {getQualityBadge(pair.black)}
                 </button>
               ) : (
                 <div className="flex-1" />

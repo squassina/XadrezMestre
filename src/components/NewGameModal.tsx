@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { BotLevel } from '../types/chess';
+import { BotLevel, TimeControl } from '../types/chess';
 import { BOT_CONFIGS } from '../utils/engine';
-import { Bot, User, Check, Sparkles, Shield, X } from 'lucide-react';
+import { TIME_CONTROLS, DEFAULT_TIME_CONTROL } from '../data/timeControls';
+import { Sparkles, X, Clock, Zap, Flame, Timer, Infinity } from 'lucide-react';
 
 interface NewGameModalProps {
   isOpen: boolean;
@@ -11,8 +12,10 @@ interface NewGameModalProps {
     playerColor: 'w' | 'b';
     coachInterruption: boolean;
     showEvalBar: boolean;
+    timeControl: TimeControl;
   }) => void;
   currentBotLevel: BotLevel;
+  currentTimeControl: TimeControl;
 }
 
 export const NewGameModal: React.FC<NewGameModalProps> = ({
@@ -20,9 +23,11 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
   onClose,
   onStartGame,
   currentBotLevel,
+  currentTimeControl,
 }) => {
   const [selectedBot, setSelectedBot] = useState<BotLevel>(currentBotLevel);
   const [selectedColor, setSelectedColor] = useState<'w' | 'b' | 'random'>('w');
+  const [selectedTimeControl, setSelectedTimeControl] = useState<TimeControl>(currentTimeControl || DEFAULT_TIME_CONTROL);
   const [coachInterruption, setCoachInterruption] = useState(true);
   const [showEvalBar, setShowEvalBar] = useState(true);
 
@@ -35,6 +40,7 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
       playerColor: finalColor,
       coachInterruption,
       showEvalBar,
+      timeControl: selectedTimeControl,
     });
     onClose();
   };
@@ -42,8 +48,8 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
   const botList: BotLevel[] = ['beginner', 'intermediate', 'advanced', 'master'];
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-5 shadow-2xl flex flex-col gap-4 text-slate-100">
+    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-5 shadow-2xl flex flex-col gap-4 text-slate-100 my-8 max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-800 pb-3">
           <div className="flex items-center gap-2">
@@ -58,8 +64,49 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
           </button>
         </div>
 
-        {/* Bot Level Selection */}
+        {/* Time Control Selection */}
         <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5 text-amber-400" />
+              <span>Controle de Tempo (Relógio):</span>
+            </label>
+            <span className="text-[11px] font-mono text-amber-400 font-bold">
+              {selectedTimeControl.description}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
+            {TIME_CONTROLS.map((tc) => {
+              const isSelected = selectedTimeControl.id === tc.id;
+              let icon = <Timer className="w-3 h-3 text-emerald-400" />;
+              if (tc.type === 'bullet') icon = <Zap className="w-3 h-3 text-amber-400" />;
+              if (tc.type === 'blitz') icon = <Flame className="w-3 h-3 text-orange-400" />;
+              if (tc.type === 'unlimited') icon = <Infinity className="w-3 h-3 text-sky-400" />;
+
+              return (
+                <button
+                  key={tc.id}
+                  onClick={() => setSelectedTimeControl(tc)}
+                  className={`p-2 rounded-xl border text-center flex flex-col items-center justify-center gap-1 transition-all ${
+                    isSelected
+                      ? 'bg-amber-500/15 border-amber-500/60 ring-1 ring-amber-500/40 text-amber-200'
+                      : 'bg-slate-950/60 border-slate-800 hover:bg-slate-800/60 text-slate-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-1">
+                    {icon}
+                    <span className="font-mono font-bold text-xs">{tc.name}</span>
+                  </div>
+                  <span className="text-[10px] text-slate-400 capitalize">{tc.type}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Bot Level Selection */}
+        <div className="space-y-2 pt-1 border-t border-slate-800">
           <label className="text-xs font-semibold text-slate-300">Escolha seu Oponente de Treino:</label>
           <div className="grid grid-cols-2 gap-2">
             {botList.map((lvl) => {
@@ -88,7 +135,7 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
         </div>
 
         {/* Color Choice */}
-        <div className="space-y-2">
+        <div className="space-y-2 pt-1 border-t border-slate-800">
           <label className="text-xs font-semibold text-slate-300">Suas Peças:</label>
           <div className="grid grid-cols-3 gap-2">
             <button

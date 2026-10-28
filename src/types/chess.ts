@@ -39,6 +39,9 @@ export interface AnalyzedMove {
   blunderCategory?: BlunderCategory;
   bestMoveSan?: string;
   bestMoveFromTo?: { from: string; to: string };
+  isBookMove?: boolean;
+  openingName?: string;
+  eco?: string;
   coachFeedback?: CoachFeedback;
   timestamp: number;
 }
@@ -98,3 +101,15 @@ export interface BoardArrow {
   color: 'green' | 'red' | 'amber' | 'blue';
   width?: number;
 }
+
+export type TimeControlType = 'bullet' | 'blitz' | 'rapid' | 'unlimited';
+
+export interface TimeControl {
+  id: string;
+  name: string;
+  type: TimeControlType;
+  baseMinutes: number;
+  incrementSeconds: number;
+  description: string;
+}
+

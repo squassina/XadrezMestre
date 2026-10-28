@@ -7,7 +7,7 @@ interface ChessPieceProps {
   className?: string;
 }
 
-export const ChessPiece: React.FC<ChessPieceProps> = ({ type, color, className = 'w-full h-full' }) => {
+export const ChessPiece: React.FC<ChessPieceProps> = React.memo(({ type, color, className = 'w-full h-full' }) => {
   const isWhite = color === 'w';
   const fill = isWhite ? '#FFFFFF' : '#1e293b';
   const stroke = isWhite ? '#1e293b' : '#f8fafc';
@@ -104,4 +104,4 @@ export const ChessPiece: React.FC<ChessPieceProps> = ({ type, color, className =
     default:
       return null;
   }
-};
+});

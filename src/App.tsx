@@ -1,22 +1,26 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Chess, Square, PieceSymbol, Move } from 'chess.js';
 import { 
-  AnalyzedMove, BotLevel, PlayerStats, BoardArrow, BlunderCategory, MoveQuality 
+  AnalyzedMove, BotLevel, PlayerStats, BoardArrow, BlunderCategory, MoveQuality, TimeControl 
 } from './types/chess';
-import { analyzeMove, getBotMove, evaluateBoard, BOT_CONFIGS } from './utils/engine';
+import { analyzeMove, analyzeMoveAsync, getBotMove, evaluateBoard, BOT_CONFIGS } from './utils/engine';
 import { soundEffects } from './utils/sound';
+import { TIME_CONTROLS, DEFAULT_TIME_CONTROL } from './data/timeControls';
 import { TopNav, NavTab } from './components/TopNav';
 import { ChessBoard } from './components/ChessBoard';
+import { ChessClock } from './components/ChessClock';
 import { EvalBar } from './components/EvalBar';
 import { MoveHistory } from './components/MoveHistory';
 import { CoachPanel } from './components/CoachPanel';
+import { OpeningBookPanel } from './components/OpeningBookPanel';
+import { getOpeningForPosition } from './data/openings';
 import { TacticalTrainer } from './components/TacticalTrainer';
 import { MistakeAnalytics } from './components/MistakeAnalytics';
 import { ChessPrinciples } from './components/ChessPrinciples';
 import { NewGameModal } from './components/NewGameModal';
 import { 
   RotateCcw, Sparkles, Trophy, Lightbulb, RefreshCw, Flag, 
-  HelpCircle, ChevronRight, User, Bot, AlertTriangle 
+  HelpCircle, ChevronRight, User, Bot, AlertTriangle, Timer, Zap, Flame, Clock 
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -68,6 +72,11 @@ export default function App() {
   const [gameOver, setGameOver] = useState<{ isOver: boolean; winner?: 'player' | 'bot' | 'draw'; message?: string }>({
     isOver: false,
   });
+
+  // Time Control & Chess Clock State
+  const [timeControl, setTimeControl] = useState<TimeControl>(DEFAULT_TIME_CONTROL);
+  const [whiteTime, setWhiteTime] = useState<number>(DEFAULT_TIME_CONTROL.baseMinutes * 60 * 1000);
+  const [blackTime, setBlackTime] = useState<number>(DEFAULT_TIME_CONTROL.baseMinutes * 60 * 1000);
 
   // Persistent Player Stats
   const [playerStats, setPlayerStats] = useState<PlayerStats>(() => {
@@ -133,17 +142,81 @@ export default function App() {
     };
   }, [chess.fen()]);
 
+  // Handle Time-Out Flag Fall
+  const handleTimeOut = useCallback((flaggedColor: 'w' | 'b') => {
+    soundEffects.playFlagFall();
+    const isPlayerFlagged = flaggedColor === playerColor;
+    const winner = isPlayerFlagged ? 'bot' : 'player';
+
+    if (winner === 'player') {
+      confetti({ particleCount: 70, spread: 70, origin: { y: 0.6 } });
+    }
+
+    setGameOver({
+      isOver: true,
+      winner,
+      message: isPlayerFlagged
+        ? 'Derrota por Tempo! Seu relógio esgotou.'
+        : 'Vitória por Tempo! O relógio do adversário zerou.',
+    });
+
+    setPlayerStats((prev) => ({
+      ...prev,
+      gamesPlayed: prev.gamesPlayed + 1,
+      gamesWon: prev.gamesWon + (winner === 'player' ? 1 : 0),
+      gamesLost: prev.gamesLost + (winner === 'bot' ? 1 : 0),
+    }));
+  }, [playerColor]);
+
+  // Timer countdown loop
+  useEffect(() => {
+    if (timeControl.type === 'unlimited' || gameOver.isOver || moves.length === 0) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      const turn = chess.turn();
+      if (turn === 'w') {
+        setWhiteTime((prev) => {
+          if (prev <= 100) {
+            handleTimeOut('w');
+            return 0;
+          }
+          if (prev < 10000 && prev % 1000 < 100 && playerColor === 'w') {
+            soundEffects.playLowTimeTick();
+          }
+          return prev - 100;
+        });
+      } else {
+        setBlackTime((prev) => {
+          if (prev <= 100) {
+            handleTimeOut('b');
+            return 0;
+          }
+          if (prev < 10000 && prev % 1000 < 100 && playerColor === 'b') {
+            soundEffects.playLowTimeTick();
+          }
+          return prev - 100;
+        });
+      }
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, [timeControl.type, gameOver.isOver, moves.length, chess.turn(), playerColor, handleTimeOut]);
+
   // Start new match
   const handleStartNewGame = ({
     botLevel: newLevel,
     playerColor: newColor,
     coachInterruption: newCoach,
     showEvalBar: newEval,
+    timeControl: newTimeControl,
   }: {
     botLevel: BotLevel;
     playerColor: 'w' | 'b';
     coachInterruption: boolean;
     showEvalBar: boolean;
+    timeControl: TimeControl;
   }) => {
     const newChess = new Chess();
     setChess(newChess);
@@ -153,6 +226,10 @@ export default function App() {
     setBotLevel(newLevel);
     setCoachInterruption(newCoach);
     setShowEvalBar(newEval);
+    setTimeControl(newTimeControl);
+    const initialMs = newTimeControl.baseMinutes * 60 * 1000;
+    setWhiteTime(initialMs);
+    setBlackTime(initialMs);
     setEvalScore(0);
     setArrows([]);
     setLastMove(null);
@@ -215,103 +292,131 @@ export default function App() {
   };
 
   // Bot move logic
-  const makeBotMove = (currentGame: Chess, currentBot: BotLevel, currentMoveList: AnalyzedMove[]) => {
+  const makeBotMove = useCallback((currentGame: Chess, currentBot: BotLevel, currentMoveList: AnalyzedMove[]) => {
     setIsBotThinking(true);
-    const botMove = getBotMove(currentGame, currentBot);
 
-    if (!botMove) {
+    setTimeout(() => {
+      const botMove = getBotMove(currentGame, currentBot);
+
+      if (!botMove) {
+        setIsBotThinking(false);
+        return;
+      }
+
+      const chessBeforeBot = new Chess(currentGame.fen());
+      const newGame = new Chess(currentGame.fen());
+      newGame.move(botMove);
+
+      soundEffects.playMove();
+      if (botMove.captured) soundEffects.playCapture();
+      if (newGame.inCheck()) soundEffects.playCheck();
+
+      // Immediate board update
+      setChess(newGame);
+      setLastMove({ from: botMove.from, to: botMove.to });
+      setArrows([]);
+      setIsShowingBestMoveArrow(false);
       setIsBotThinking(false);
-      return;
-    }
 
-    // Analyze bot move
-    const analyzed = analyzeMove(currentGame, botMove, 2);
-    currentGame.move(botMove);
+      // Add increment to bot's clock
+      if (timeControl.incrementSeconds > 0) {
+        const botColor = playerColor === 'w' ? 'b' : 'w';
+        if (botColor === 'w') {
+          setWhiteTime((t) => t + timeControl.incrementSeconds * 1000);
+        } else {
+          setBlackTime((t) => t + timeControl.incrementSeconds * 1000);
+        }
+      }
 
-    soundEffects.playMove();
-    if (botMove.captured) soundEffects.playCapture();
-    if (currentGame.inCheck()) soundEffects.playCheck();
+      // Async analysis of bot move
+      analyzeMoveAsync(chessBeforeBot, botMove, 2).then((analyzed) => {
+        const newMoves = [...currentMoveList, analyzed];
+        setMoves(newMoves);
+        setHistoryIndex(newMoves.length - 1);
+        setEvalScore(analyzed.evalAfter);
+        checkGameOverStatus(newGame, newGame.turn() === 'w' ? 'b' : 'w');
+      });
+    }, 350);
+  }, [checkGameOverStatus, playerColor, timeControl.incrementSeconds]);
 
-    const newMoves = [...currentMoveList, analyzed];
-    setMoves(newMoves);
-    setHistoryIndex(newMoves.length - 1);
-    setLastMove({ from: botMove.from, to: botMove.to });
-    setChess(new Chess(currentGame.fen()));
-    setEvalScore(analyzed.evalAfter);
-    setArrows([]);
-    setIsShowingBestMoveArrow(false);
-    setIsBotThinking(false);
-
-    checkGameOverStatus(currentGame, currentGame.turn() === 'w' ? 'b' : 'w');
-  };
-
-  // Handle Player Move
-  const handlePlayerMove = ({ from, to, promotion }: { from: Square; to: Square; promotion?: string }) => {
+  // Handle Player Move - Zero-Lag Optimistic Execution
+  const handlePlayerMove = useCallback(({ from, to, promotion }: { from: Square; to: Square; promotion?: string }) => {
     if (gameOver.isOver || isBotThinking || chess.turn() !== playerColor) return;
 
     try {
       const chessBefore = new Chess(chess.fen());
-      const testMove = new Chess(chess.fen()).move({ from, to, promotion: promotion || 'q' });
+      const newGame = new Chess(chess.fen());
+      const testMove = newGame.move({ from, to, promotion: promotion || 'q' });
       if (!testMove) return;
 
-      // Analyze player move in depth 3
-      const analyzed = analyzeMove(chessBefore, testMove, 3);
-      const newGame = new Chess(chess.fen());
-      newGame.move({ from, to, promotion: promotion || 'q' });
-
-      // Audio feedback
-      if (analyzed.quality === 'blunder' || analyzed.quality === 'mistake') {
-        soundEffects.playBlunder();
-      } else {
-        soundEffects.playMove();
-        if (testMove.captured) soundEffects.playCapture();
-        if (newGame.inCheck()) soundEffects.playCheck();
-      }
-
-      const newMoveList = [...moves, analyzed];
-      setMoves(newMoveList);
-      setHistoryIndex(newMoveList.length - 1);
-      setLastMove({ from, to });
+      // 1. INSTANT UI UPDATE: piece lands immediately with 0ms lag
       setChess(newGame);
-      setEvalScore(analyzed.evalAfter);
+      setLastMove({ from, to });
       setArrows([]);
       setIsShowingBestMoveArrow(false);
 
-      // Record mistake if blunder or mistake
-      if (analyzed.blunderCategory && (analyzed.quality === 'blunder' || analyzed.quality === 'mistake' || analyzed.quality === 'inaccuracy')) {
-        const cat = analyzed.blunderCategory;
-        const currentCount = playerStats.mistakesByType[cat] || 0;
-        const newMistakeRecord = {
-          id: `err-${Date.now()}`,
-          date: new Date().toLocaleDateString('pt-BR'),
-          category: cat,
-          fen: chessBefore.fen(),
-          movePlayed: testMove.san,
-          bestMove: analyzed.bestMoveSan || 'Melhor lance',
-          explanation: `Você jogou ${testMove.san}, permitindo desvantagem tática em relação a ${analyzed.bestMoveSan}.`,
-        };
-
-        updateStats({
-          mistakesByType: {
-            ...playerStats.mistakesByType,
-            [cat]: currentCount + 1,
-          },
-          recentMistakes: [newMistakeRecord, ...playerStats.recentMistakes.slice(0, 19)],
-        });
+      // Add increment to player's clock
+      if (timeControl.incrementSeconds > 0) {
+        if (playerColor === 'w') {
+          setWhiteTime((t) => t + timeControl.incrementSeconds * 1000);
+        } else {
+          setBlackTime((t) => t + timeControl.incrementSeconds * 1000);
+        }
       }
 
-      // Check for Game Over
-      const ended = checkGameOverStatus(newGame, playerColor);
-      if (ended) return;
+      if (testMove.captured) {
+        soundEffects.playCapture();
+      } else if (newGame.inCheck()) {
+        soundEffects.playCheck();
+      } else {
+        soundEffects.playMove();
+      }
 
-      // Trigger Bot response if not game over
-      setTimeout(() => {
+      // 2. NON-BLOCKING ASYNC ANALYSIS
+      analyzeMoveAsync(chessBefore, testMove, 2).then((analyzed) => {
+        if (analyzed.quality === 'blunder' || analyzed.quality === 'mistake') {
+          soundEffects.playBlunder();
+        }
+
+        const newMoveList = [...moves, analyzed];
+        setMoves(newMoveList);
+        setHistoryIndex(newMoveList.length - 1);
+        setEvalScore(analyzed.evalAfter);
+
+        // Record mistake if blunder or mistake
+        if (analyzed.blunderCategory && (analyzed.quality === 'blunder' || analyzed.quality === 'mistake' || analyzed.quality === 'inaccuracy')) {
+          const cat = analyzed.blunderCategory;
+          const currentCount = playerStats.mistakesByType[cat] || 0;
+          const newMistakeRecord = {
+            id: `err-${Date.now()}`,
+            date: new Date().toLocaleDateString('pt-BR'),
+            category: cat,
+            fen: chessBefore.fen(),
+            movePlayed: testMove.san,
+            bestMove: analyzed.bestMoveSan || 'Melhor lance',
+            explanation: `Você jogou ${testMove.san}, permitindo desvantagem tática em relação a ${analyzed.bestMoveSan}.`,
+          };
+
+          updateStats({
+            mistakesByType: {
+              ...playerStats.mistakesByType,
+              [cat]: currentCount + 1,
+            },
+            recentMistakes: [newMistakeRecord, ...playerStats.recentMistakes.slice(0, 19)],
+          });
+        }
+
+        // Check for Game Over
+        const ended = checkGameOverStatus(newGame, playerColor);
+        if (ended) return;
+
+        // Trigger Bot response if not game over
         makeBotMove(newGame, botLevel, newMoveList);
-      }, 550);
+      });
     } catch (e) {
       console.error(e);
     }
-  };
+  }, [chess, playerColor, isBotThinking, gameOver.isOver, moves, botLevel, playerStats, makeBotMove, checkGameOverStatus, timeControl.incrementSeconds]);
 
   // Undo move and retry
   const handleUndoMove = () => {
@@ -446,6 +551,11 @@ export default function App() {
                     <div className="font-bold text-slate-100 flex items-center gap-1.5">
                       <span>{botConfig.name}</span>
                       <span className="text-[10px] text-amber-400 font-mono">({botConfig.elo} Elo)</span>
+                      {timeControl.type !== 'unlimited' && (
+                        <span className="text-[10px] font-mono text-slate-400 px-1.5 py-0.2 rounded bg-slate-800 border border-slate-700/80">
+                          {timeControl.name}
+                        </span>
+                      )}
                     </div>
                     <div className="text-[10px] text-slate-400">
                       {isBotThinking ? (
@@ -458,6 +568,14 @@ export default function App() {
                 </div>
 
                 <div className="flex items-center gap-2">
+                  {timeControl.type !== 'unlimited' && (
+                    <ChessClock
+                      timeRemainingMs={playerColor === 'w' ? blackTime : whiteTime}
+                      isActive={!gameOver.isOver && moves.length > 0 && chess.turn() !== playerColor}
+                      playerColor={playerColor === 'w' ? 'b' : 'w'}
+                      compact={true}
+                    />
+                  )}
                   <button
                     onClick={() => setNewGameModalOpen(true)}
                     className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700 transition-colors"
@@ -505,8 +623,16 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Quick Board Actions */}
+                {/* Quick Board Actions & Player Clock */}
                 <div className="flex items-center gap-2">
+                  {timeControl.type !== 'unlimited' && (
+                    <ChessClock
+                      timeRemainingMs={playerColor === 'w' ? whiteTime : blackTime}
+                      isActive={!gameOver.isOver && moves.length > 0 && chess.turn() === playerColor}
+                      playerColor={playerColor}
+                      compact={true}
+                    />
+                  )}
                   <button
                     onClick={handleUndoMove}
                     disabled={moves.length === 0}
@@ -539,7 +665,7 @@ export default function App() {
                   </p>
                   <div className="flex items-center justify-center gap-2 mt-1">
                     <button
-                      onClick={() => handleStartNewGame({ botLevel, playerColor, coachInterruption, showEvalBar })}
+                      onClick={() => handleStartNewGame({ botLevel, playerColor, coachInterruption, showEvalBar, timeControl })}
                       className="px-4 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold shadow-sm"
                     >
                       Jogar Novamente
@@ -564,8 +690,14 @@ export default function App() {
                 isLoadingAiHelp={isLoadingAiHelp}
               />
 
+              {/* Opening Book Library Panel (first 10-15 moves) */}
+              <OpeningBookPanel
+                fen={chess.fen()}
+                moveCount={moves.length}
+              />
+
               {/* Move History Panel */}
-              <div className="h-[280px]">
+              <div className="h-[260px]">
                 <MoveHistory
                   moves={moves}
                   currentMoveIndex={historyIndex}
@@ -619,6 +751,7 @@ export default function App() {
         onClose={() => setNewGameModalOpen(false)}
         onStartGame={handleStartNewGame}
         currentBotLevel={botLevel}
+        currentTimeControl={timeControl}
       />
     </div>
   );
