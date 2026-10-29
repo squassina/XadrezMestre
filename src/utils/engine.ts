@@ -6,7 +6,7 @@ import { getOpeningForPosition, getBookMove, OPENING_BOOK, OpeningEntry } from '
 export { getOpeningForPosition, getBookMove, OPENING_BOOK };
 
 // Standard piece values in centipawns
-const PIECE_VALUES: Record<PieceSymbol, number> = {
+export const PIECE_VALUES: Record<PieceSymbol, number> = {
   p: 100,
   n: 320,
   b: 330,
@@ -540,3 +540,8 @@ export function getBotMove(chess: Chess, botLevel: BotLevel): Move | null {
   const { move } = findBestMove(chess, config.depth);
   return move || moves[0];
 }
+
+// usado por search.ts (motor interno de reserva)
+export const PST: Record<PieceSymbol, number[]> = {
+  p: PAWN_TABLE, n: KNIGHT_TABLE, b: BISHOP_TABLE, r: ROOK_TABLE, q: QUEEN_TABLE, k: KING_TABLE,
+};

@@ -1,0 +1,59 @@
+name: Deploy backend (Stockfish) no Cloud Run
+
+on:
+  push:
+    branches: ['main']
+    paths:
+      - 'server.ts'
+      - 'server/**'
+      - 'Dockerfile'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/deploy-backend.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write   # autenticação sem chave (Workload Identity Federation)
+
+concurrency:
+  group: backend
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Typecheck
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+
+      - name: Autenticar no Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+
+      - name: Build (Dockerfile) e deploy
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: xadrezmestre-api
+          region: ${{ vars.GCP_REGION }}
+          source: .
+          flags: >-
+            --allow-unauthenticated
+            --cpu=2 --memory=1Gi
+            --concurrency=8
+            --min-instances=0 --max-instances=2
+          env_vars: |
+            ALLOWED_ORIGIN=https://squassina.github.io
+            ENGINE_POOL=2
+          # opcional, coach com Gemini:
+          # secrets: GEMINI_API_KEY=gemini-api-key:latest
