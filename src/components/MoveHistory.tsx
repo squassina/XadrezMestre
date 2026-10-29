@@ -3,6 +3,7 @@ import { AnalyzedMove, MoveQuality } from '../types/chess';
 import { ChevronFirst, ChevronLeft, ChevronRight, ChevronLast, Copy, Check } from 'lucide-react';
 import { ChessPiece } from './ChessPiece';
 import { PieceSymbol, Color } from 'chess.js';
+import { useI18n } from '../i18n';
 
 interface MoveHistoryProps {
   moves: AnalyzedMove[];
@@ -21,6 +22,7 @@ export const MoveHistory: React.FC<MoveHistoryProps> = ({
   capturedBlack,
   materialDiff,
 }) => {
+  const { t } = useI18n();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [copied, setCopied] = React.useState(false);
 
@@ -33,7 +35,7 @@ export const MoveHistory: React.FC<MoveHistoryProps> = ({
   const getQualityBadge = (move?: AnalyzedMove) => {
     if (!move) return null;
     if (move.isBookMove) {
-      return <span className="text-[10px] font-bold text-sky-400 font-mono" title="Livro Teórico de Aberturas">📖</span>;
+      return <span className="text-[10px] font-bold text-sky-400 font-mono" title={t('Livro Teórico de Aberturas')}>📖</span>;
     }
     switch (move.quality) {
       case 'brilliant':
@@ -208,7 +210,7 @@ export const MoveHistory: React.FC<MoveHistoryProps> = ({
           className="flex items-center gap-1 px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs disabled:opacity-30"
         >
           {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-          <span>{copied ? 'Copiado' : 'PGN'}</span>
+          <span>{copied ? t('Copiado') : t('PGN')}</span>
         </button>
       </div>
     </div>

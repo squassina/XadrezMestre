@@ -182,3 +182,10 @@ Contribuições são bem-vindas. Para mudanças de comportamento, inclua testes 
 ---
 
 **XadrezMestre — jogue, revise, aprenda e evolua.**
+
+
+## Idioma da interface / Interface language
+
+A interface oferece **Português do Brasil (`pt-BR`)** e **English (`en`)**. O idioma inicial é escolhido pelo idioma do navegador (inglês quando o navegador estiver configurado em inglês; caso contrário, português do Brasil). A seleção pode ser alterada no seletor de idioma da barra superior e fica salva localmente no navegador.
+
+The UI supports **Brazilian Portuguese (`pt-BR`)** and **English (`en`)**. The initial language follows the browser language (English for English browser settings; otherwise Brazilian Portuguese). Change it using the language selector in the top navigation; the choice is saved locally in the browser.

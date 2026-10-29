@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { AnalyzedMove, TimeControl, MoveQuality } from '../types/chess';
+import { useI18n } from '../i18n';
 import {
   Trophy, AlertTriangle, Sparkles, TrendingUp, ArrowRight,
   RotateCcw, CheckCircle2, XCircle, Clock, Zap, Target, X, ChevronRight
@@ -60,6 +61,7 @@ export const GameReportModal: React.FC<GameReportModalProps> = ({
   onNewGame,
   onPracticeTactics,
 }) => {
+  const { t } = useI18n();
   const [selectedPointIndex, setSelectedPointIndex] = useState<number | null>(null);
 
   // Compute accuracies and stats using standard Win-Probability Loss method
@@ -224,7 +226,7 @@ export const GameReportModal: React.FC<GameReportModalProps> = ({
           {/* Player Accuracy Card */}
           <div className="p-4 rounded-xl bg-slate-950/80 border border-amber-500/30 flex items-center justify-between">
             <div>
-              <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Sua Precisão</span>
+              <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">{t('Sua Precisão')}</span>
               <div className="flex items-baseline gap-2 mt-0.5">
                 <span className="text-3xl font-extrabold font-mono text-amber-400 tabular-nums">
                   {playerAccuracy}%
@@ -246,7 +248,7 @@ export const GameReportModal: React.FC<GameReportModalProps> = ({
           {/* Bot Accuracy Card */}
           <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between">
             <div>
-              <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Precisão do Oponente</span>
+              <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">{t('Precisão do Oponente')}</span>
               <div className="flex items-baseline gap-2 mt-0.5">
                 <span className="text-3xl font-extrabold font-mono text-slate-300 tabular-nums">
                   {botAccuracy}%
@@ -269,7 +271,7 @@ export const GameReportModal: React.FC<GameReportModalProps> = ({
         {/* Move Quality Comparison Table */}
         <div className="bg-slate-950/70 border border-slate-800 rounded-xl p-3.5">
           <div className="text-xs font-semibold text-slate-300 mb-2 flex items-center justify-between">
-            <span>Classificação dos Lances</span>
+            <span>{t('Classificação dos Lances')}</span>
             <span className="text-[11px] text-slate-400">Você vs {botName}</span>
           </div>
 
@@ -448,7 +450,7 @@ export const GameReportModal: React.FC<GameReportModalProps> = ({
           <div className="space-y-2">
             <h4 className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
               <Zap className="w-4 h-4 text-rose-400" />
-              <span>Momentos Decisivos da Partida (Maiores Oscilações)</span>
+              <span>{t('Momentos Decisivos da Partida (Maiores Oscilações)')}</span>
             </h4>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -502,7 +504,7 @@ export const GameReportModal: React.FC<GameReportModalProps> = ({
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition-all"
           >
             <Target className="w-4 h-4 text-amber-400" />
-            <span>Treinar Táticas Baseadas Nos Erros</span>
+            <span>{t('Treinar Táticas Baseadas Nos Erros')}</span>
           </button>
 
           <div className="flex items-center gap-2">

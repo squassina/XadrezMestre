@@ -1,6 +1,7 @@
 import React from 'react';
 import { BookOpen, Compass, ChevronRight, Check } from 'lucide-react';
 import { getOpeningForPosition, BookMove } from '../data/openings';
+import { useI18n } from '../i18n';
 
 interface OpeningBookPanelProps {
   fen: string;
@@ -13,6 +14,7 @@ export const OpeningBookPanel: React.FC<OpeningBookPanelProps> = ({
   moveCount,
   onPreviewMove,
 }) => {
+  const { t } = useI18n();
   const opening = getOpeningForPosition(fen);
 
   if (!opening || moveCount > 30) {
@@ -21,9 +23,9 @@ export const OpeningBookPanel: React.FC<OpeningBookPanelProps> = ({
         <div className="px-3.5 py-2 rounded-xl bg-slate-900/60 border border-slate-800/80 text-xs flex items-center justify-between text-slate-400">
           <div className="flex items-center gap-2">
             <Compass className="w-4 h-4 text-slate-500" />
-            <span>Fase de Meio-Jogo / Fim da Teoria</span>
+            <span>{t('Fase de Meio-Jogo / Fim da Teoria')}</span>
           </div>
-          <span className="text-[11px] text-slate-500 font-mono">Motor de Cálculo Ativo</span>
+          <span className="text-[11px] text-slate-500 font-mono">{t('Motor de Cálculo Ativo')}</span>
         </div>
       );
     }
@@ -58,14 +60,14 @@ export const OpeningBookPanel: React.FC<OpeningBookPanelProps> = ({
       {/* Strategic Plan */}
       {opening.plan && (
         <p className="text-[11px] text-slate-300 leading-relaxed italic">
-          <strong className="text-slate-200 not-italic">Plano:</strong> {opening.plan}
+          <strong className="text-slate-200 not-italic">{t('Plano:')}</strong> {opening.plan}
         </p>
       )}
 
       {/* Candidate Main-Line Moves */}
       <div className="space-y-1.5 pt-1">
         <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-          Lances Principais do Livro (Mestres)
+          {t('Lances Principais do Livro (Mestres)')}
         </span>
         <div className="grid grid-cols-1 gap-1.5">
           {opening.moves.map((m, idx) => {

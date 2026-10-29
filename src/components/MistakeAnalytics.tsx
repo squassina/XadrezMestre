@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { PlayerStats, BlunderCategory } from '../types/chess';
 import { API_BASE_URL } from '../utils/remoteEngine';
+import { useI18n } from '../i18n';
 import { 
   AlertTriangle, ShieldAlert, Zap, Target, Award, Sparkles, 
   RotateCcw, CheckCircle2, TrendingUp, HelpCircle, Activity 
@@ -17,6 +18,7 @@ export const MistakeAnalytics: React.FC<MistakeAnalyticsProps> = ({
   onSelectPuzzleCategory,
   onResetStats,
 }) => {
+  const { t } = useI18n();
   const [aiReport, setAiReport] = useState<{
     summary?: string;
     strengths?: string[];
@@ -72,7 +74,7 @@ export const MistakeAnalytics: React.FC<MistakeAnalyticsProps> = ({
       {/* Top Summary Banner */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="bg-slate-900 border border-slate-800 p-3.5 rounded-xl flex flex-col">
-          <span className="text-[11px] text-slate-400">Total de Partidas</span>
+          <span className="text-[11px] text-slate-400">{t('Total de Partidas')}</span>
           <span className="text-xl font-bold font-mono text-slate-100 tabular-nums mt-0.5">
             {playerStats.gamesPlayed}
           </span>
@@ -82,7 +84,7 @@ export const MistakeAnalytics: React.FC<MistakeAnalyticsProps> = ({
         </div>
 
         <div className="bg-slate-900 border border-slate-800 p-3.5 rounded-xl flex flex-col">
-          <span className="text-[11px] text-slate-400">Gafes e Erros Registrados</span>
+          <span className="text-[11px] text-slate-400">{t('Gafes e Erros Registrados')}</span>
           <span className="text-xl font-bold font-mono text-rose-400 tabular-nums mt-0.5">
             {totalMistakes}
           </span>
@@ -94,7 +96,7 @@ export const MistakeAnalytics: React.FC<MistakeAnalyticsProps> = ({
         </div>
 
         <div className="bg-slate-900 border border-slate-800 p-3.5 rounded-xl flex flex-col">
-          <span className="text-[11px] text-slate-400">Rating Tático</span>
+          <span className="text-[11px] text-slate-400">{t('Rating Tático')}</span>
           <span className="text-xl font-bold font-mono text-amber-400 tabular-nums mt-0.5">
             {playerStats.tacticalRating}
           </span>
@@ -104,11 +106,11 @@ export const MistakeAnalytics: React.FC<MistakeAnalyticsProps> = ({
         </div>
 
         <div className="bg-slate-900 border border-slate-800 p-3.5 rounded-xl flex flex-col">
-          <span className="text-[11px] text-slate-400">Melhor Sequência</span>
+          <span className="text-[11px] text-slate-400">{t('Melhor Sequência')}</span>
           <span className="text-xl font-bold font-mono text-emerald-400 tabular-nums mt-0.5">
             {playerStats.bestStreak} 🔥
           </span>
-          <span className="text-[10px] text-slate-400 mt-1">Acertos consecutivos</span>
+          <span className="text-[10px] text-slate-400 mt-1">{t('Acertos consecutivos')}</span>
         </div>
       </div>
 
@@ -118,8 +120,8 @@ export const MistakeAnalytics: React.FC<MistakeAnalyticsProps> = ({
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-bold text-slate-100">Distribuição de Erros Comuns</h3>
-              <p className="text-xs text-slate-400">Identificação automática dos padrões recorrentes no seu jogo</p>
+              <h3 className="text-sm font-bold text-slate-100">{t('Distribuição de Erros Comuns')}</h3>
+              <p className="text-xs text-slate-400">{t('Identificação automática dos padrões recorrentes no seu jogo')}</p>
             </div>
             <Activity className="w-5 h-5 text-amber-400" />
           </div>
@@ -139,7 +141,7 @@ export const MistakeAnalytics: React.FC<MistakeAnalyticsProps> = ({
                       <div className="flex items-center justify-between text-xs">
                         <div className="flex items-center gap-1.5 font-medium text-slate-200">
                           {mistakeIcons[category] || <AlertTriangle className="w-4 h-4 text-amber-400" />}
-                          <span>{category}</span>
+                          <span>{t(category)}</span>
                         </div>
                         <div className="flex items-center gap-2 font-mono text-slate-400">
                           <span>{count} ocorrências</span>
@@ -157,7 +159,7 @@ export const MistakeAnalytics: React.FC<MistakeAnalyticsProps> = ({
 
                       {/* Targeted tip & Action */}
                       <div className="flex items-center justify-between text-[11px] text-slate-400 pt-0.5">
-                        <span className="truncate max-w-[260px] text-slate-400/90">{mistakeTips[category] || ''}</span>
+                        <span className="truncate max-w-[260px] text-slate-400/90">{t(mistakeTips[category] || '')}</span>
                         <button
                           onClick={() => onSelectPuzzleCategory(category)}
                           className="text-amber-400 hover:text-amber-300 font-medium shrink-0 ml-2 hover:underline"
@@ -178,21 +180,21 @@ export const MistakeAnalytics: React.FC<MistakeAnalyticsProps> = ({
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-amber-400" />
-                <h3 className="text-sm font-bold text-slate-100">Diagnóstico do Mestre AI</h3>
+                <h3 className="text-sm font-bold text-slate-100">{t('Diagnóstico do Mestre AI')}</h3>
               </div>
               <button
                 onClick={handleRequestAiDiagnostics}
                 disabled={loadingAi}
                 className="px-3 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-semibold shadow-xs disabled:opacity-50 transition-all"
               >
-                {loadingAi ? 'Gerando Plano...' : 'Atualizar Diagnóstico'}
+                {loadingAi ? t('Gerando Plano...') : t('Atualizar Diagnóstico')}
               </button>
             </div>
 
             {aiReport ? (
               <div className="space-y-3 text-xs leading-relaxed">
                 <div className="p-3 rounded-lg bg-slate-950 border border-slate-800 text-slate-200">
-                  <p className="font-medium text-amber-300 mb-1">Avaliação do Treinador:</p>
+                  <p className="font-medium text-amber-300 mb-1">{t('Avaliação do Treinador:')}</p>
                   <p>{aiReport.summary}</p>
                 </div>
 
@@ -200,7 +202,7 @@ export const MistakeAnalytics: React.FC<MistakeAnalyticsProps> = ({
                   <div className="p-3 rounded-lg bg-slate-950/80 border border-slate-800/80">
                     <p className="font-semibold text-emerald-400 mb-1.5 flex items-center gap-1">
                       <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>Plano de Ação Recomendado:</span>
+                      <span>{t('Plano de Ação Recomendado:')}</span>
                     </p>
                     <ul className="space-y-1 list-disc list-inside text-slate-300">
                       {aiReport.recommendations.map((rec, i) => (
@@ -234,7 +236,7 @@ export const MistakeAnalytics: React.FC<MistakeAnalyticsProps> = ({
       {/* Recent Mistake History Log */}
       {playerStats.recentMistakes && playerStats.recentMistakes.length > 0 && (
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col gap-3">
-          <h3 className="text-sm font-bold text-slate-100">Gafes Recentes Analisadas em Partida</h3>
+          <h3 className="text-sm font-bold text-slate-100">{t('Gafes Recentes Analisadas em Partida')}</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
             {playerStats.recentMistakes.slice(0, 6).map((m) => (
               <div
@@ -244,7 +246,7 @@ export const MistakeAnalytics: React.FC<MistakeAnalyticsProps> = ({
                 <div className="flex items-center justify-between">
                   <span className="font-semibold text-rose-400 flex items-center gap-1">
                     <AlertTriangle className="w-3.5 h-3.5" />
-                    {m.category}
+                    {t(m.category)}
                   </span>
                   <span className="text-[10px] text-slate-500">{m.date}</span>
                 </div>

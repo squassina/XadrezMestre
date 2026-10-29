@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Chess, Square } from 'chess.js';
 import { TacticalPuzzle, PlayerStats, BlunderCategory, BoardArrow, PieceSet, BoardTheme } from '../types/chess';
+import { useI18n } from '../i18n';
 import { INITIAL_PUZZLES, getPersonalizedPuzzles } from '../data/puzzles';
 import { ChessBoard } from './ChessBoard';
 import { soundEffects } from '../utils/sound';
@@ -23,6 +24,7 @@ export const TacticalTrainer: React.FC<TacticalTrainerProps> = ({
   boardTheme,
   pieceSet = 'staunty',
 }) => {
+  const { t } = useI18n();
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [puzzles, setPuzzles] = useState<TacticalPuzzle[]>([]);
   const [currentPuzzleIndex, setCurrentPuzzleIndex] = useState<number>(0);
@@ -248,7 +250,7 @@ export const TacticalTrainer: React.FC<TacticalTrainerProps> = ({
               <Trophy className="w-4 h-4" />
               <span className="text-sm font-bold font-mono tabular-nums">{playerStats.tacticalRating}</span>
             </div>
-            <span className="text-[10px] text-slate-400">Elo Tático</span>
+            <span className="text-[10px] text-slate-400">{t('Elo Tático')}</span>
           </div>
 
           <div className="flex flex-col items-center border-x border-slate-800">
@@ -256,7 +258,7 @@ export const TacticalTrainer: React.FC<TacticalTrainerProps> = ({
               <Flame className="w-4 h-4" />
               <span className="text-sm font-bold font-mono tabular-nums">{playerStats.streak}</span>
             </div>
-            <span className="text-[10px] text-slate-400">Sequência Atual</span>
+            <span className="text-[10px] text-slate-400">{t('Sequência Atual')}</span>
           </div>
 
           <div className="flex flex-col items-center">
@@ -264,13 +266,13 @@ export const TacticalTrainer: React.FC<TacticalTrainerProps> = ({
               <CheckCircle2 className="w-4 h-4" />
               <span className="text-sm font-bold font-mono tabular-nums">{playerStats.puzzlesSolved}</span>
             </div>
-            <span className="text-[10px] text-slate-400">Resolvidos</span>
+            <span className="text-[10px] text-slate-400">{t('Resolvidos')}</span>
           </div>
         </div>
 
         {/* Theme Filter Selector */}
         <div className="flex flex-col gap-1.5 bg-slate-900 border border-slate-800 p-3 rounded-xl">
-          <span className="text-xs font-semibold text-slate-300">Filtro de Treinamento</span>
+          <span className="text-xs font-semibold text-slate-300">{t('Filtro de Treinamento')}</span>
           <div className="flex flex-wrap gap-1.5">
             {categories.map((cat) => (
               <button
@@ -327,7 +329,7 @@ export const TacticalTrainer: React.FC<TacticalTrainerProps> = ({
           {/* Lesson on solved */}
           {puzzleStatus === 'solved' && (
             <div className="p-3 rounded-lg bg-slate-950/70 border border-slate-800 text-xs text-slate-300 leading-relaxed">
-              <strong className="text-amber-300 block mb-1">Lição do Treinador:</strong>
+              <strong className="text-amber-300 block mb-1">{t('Lição do Treinador:')}</strong>
               {currentPuzzle.lesson}
             </div>
           )}
@@ -339,7 +341,7 @@ export const TacticalTrainer: React.FC<TacticalTrainerProps> = ({
                 onClick={handleNextPuzzle}
                 className="w-full py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold flex items-center justify-center gap-1.5 shadow-md transition-all active:scale-98"
               >
-                <span>Próximo Exercício</span>
+                <span>{t('Próximo Exercício')}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             ) : puzzleStatus === 'failed' ? (
@@ -349,7 +351,7 @@ export const TacticalTrainer: React.FC<TacticalTrainerProps> = ({
                   className="flex-1 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
-                  <span>Tentar Novamente</span>
+                  <span>{t('Tentar Novamente')}</span>
                 </button>
                 <button
                   onClick={handleShowSolution}
@@ -366,7 +368,7 @@ export const TacticalTrainer: React.FC<TacticalTrainerProps> = ({
                   className="flex-1 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-200 text-xs font-medium border border-slate-700 flex items-center justify-center gap-1.5 transition-all"
                 >
                   <Lightbulb className="w-3.5 h-3.5 text-amber-400" />
-                  <span>{hintUsed ? 'Dica Revelada' : 'Pedir Dica'}</span>
+                  <span>{hintUsed ? t('Dica Revelada') : t('Pedir Dica')}</span>
                 </button>
                 <button
                   onClick={handleShowSolution}

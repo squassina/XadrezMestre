@@ -1,11 +1,13 @@
 import React from 'react';
 import { ShieldCheck, Eye, Compass, Zap, Target, BookOpen, ArrowRight } from 'lucide-react';
+import { useI18n } from '../i18n';
 
 interface ChessPrinciplesProps {
   onPracticeCategory: (category: string) => void;
 }
 
 export const ChessPrinciples: React.FC<ChessPrinciplesProps> = ({ onPracticeCategory }) => {
+  const { t } = useI18n();
   const principles = [
     {
       id: 'cca',
@@ -79,10 +81,10 @@ export const ChessPrinciples: React.FC<ChessPrinciplesProps> = ({ onPracticeCate
       <div className="border-b border-slate-800 pb-4">
         <h2 className="text-xl font-bold text-slate-100 flex items-center gap-2">
           <BookOpen className="w-5 h-5 text-amber-400" />
-          <span>Manual do Enxadrista: Dicas & Conceitos Mestres</span>
+          <span>{t('Manual do Enxadrista: Dicas & Conceitos Mestres')}</span>
         </h2>
         <p className="text-xs text-slate-400 mt-1">
-          Guia prático para eliminar os erros mais frequentes e acelerar seu progresso no xadrez.
+          {t('Guia prático para eliminar os erros mais frequentes e acelerar seu progresso no xadrez.')}
         </p>
       </div>
 
@@ -97,31 +99,31 @@ export const ChessPrinciples: React.FC<ChessPrinciplesProps> = ({ onPracticeCate
                 <div className="p-2 rounded-lg bg-slate-950 border border-slate-800">
                   {item.icon}
                 </div>
-                <h3 className="text-sm font-bold text-slate-100">{item.title}</h3>
+                <h3 className="text-sm font-bold text-slate-100">{t(item.title)}</h3>
               </div>
 
               <button
                 onClick={() => onPracticeCategory(item.category)}
                 className="text-xs text-amber-400 hover:text-amber-300 font-medium flex items-center gap-1 shrink-0 px-2.5 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 transition-all"
               >
-                <span>Praticar Este Tema</span>
+                <span>{t('Praticar Este Tema')}</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
 
             <p className="text-xs text-slate-300 font-medium leading-relaxed">
-              {item.summary}
+              {t(item.summary)}
             </p>
 
             <ul className="space-y-1.5 text-xs text-slate-400 list-disc list-inside">
               {item.details.map((bullet, idx) => (
-                <li key={idx}>{bullet}</li>
+                <li key={idx}>{t(bullet)}</li>
               ))}
             </ul>
 
             <div className="p-2.5 rounded-lg bg-slate-950/80 border border-slate-800/80 text-[11px] text-amber-300/90 flex items-center gap-2">
-              <span className="font-bold shrink-0">💡 Conselho Chave:</span>
-              <span>{item.tip}</span>
+              <span className="font-bold shrink-0">{t('💡 Conselho Chave:')}</span>
+              <span>{t(item.tip)}</span>
             </div>
           </div>
         ))}

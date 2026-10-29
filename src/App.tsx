@@ -21,6 +21,7 @@ import { MistakeAnalytics } from './components/MistakeAnalytics';
 import { ChessPrinciples } from './components/ChessPrinciples';
 import { NewGameModal } from './components/NewGameModal';
 import { GameReportModal } from './components/GameReportModal';
+import { useI18n } from './i18n';
 import {
   RotateCcw, Sparkles, Trophy, Lightbulb, RefreshCw, Flag,
   HelpCircle, ChevronRight, User, Bot, AlertTriangle, Timer, Zap, Flame, Clock, BarChart2
@@ -50,6 +51,7 @@ const DEFAULT_STATS: PlayerStats = {
 };
 
 export default function App() {
+  const { t } = useI18n();
   const [activeTab, setActiveTab] = useState<NavTab>('game');
   const [boardTheme, setBoardTheme] = useState<BoardTheme>(() => {
     try {
@@ -720,9 +722,9 @@ export default function App() {
                     </div>
                     <div className="text-[10px] text-slate-400">
                       {isBotThinking ? (
-                        <span className="text-amber-400 font-medium animate-pulse">Calculando lance...</span>
+                        <span className="text-amber-400 font-medium animate-pulse">{t('Calculando lance...')}</span>
                       ) : (
-                        <span>{playerColor === 'w' ? 'Pretas' : 'Brancas'} · {botConfig.title}</span>
+                        <span>{playerColor === 'w' ? t('Pretas') : t('Brancas')} · {t(botConfig.title)}</span>
                       )}
                     </div>
                   </div>
@@ -775,26 +777,26 @@ export default function App() {
                 <div className="flex items-center justify-between gap-3 mb-2">
                   <h3 className="text-xs font-bold text-slate-100 flex items-center gap-2">
                     <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                    Como o computador está pensando
+                    {t('Como o computador está pensando')}
                   </h3>
-                  {thinkingPlan?.status === 'thinking' && <span className="text-[10px] text-amber-300 animate-pulse">Calculando variantes…</span>}
-                  {thinkingPlan?.status === 'ready' && <span className="text-[10px] text-slate-500">{thinkingPlan.engine}{thinkingPlan.ms ? ' · ' + thinkingPlan.ms + ' ms' : ''}</span>}
+                  {thinkingPlan?.status === 'thinking' && <span className="text-[10px] text-amber-300 animate-pulse">{t('Calculando variantes…')}</span>}
+                  {thinkingPlan?.status === 'ready' && <span className="text-[10px] text-slate-500">{t(thinkingPlan.engine)}{thinkingPlan.ms ? ' · ' + thinkingPlan.ms + ' ms' : ''}</span>}
                 </div>
-                {!thinkingPlan && <p className="text-[11px] text-slate-400">Quando chegar a vez do computador, mostraremos as principais linhas calculadas e alternativas consideradas.</p>}
-                {thinkingPlan?.status === 'thinking' && <p className="text-[11px] text-slate-400">O motor está comparando lances candidatos, respostas e posições futuras. As variantes aparecem quando a busca terminar.</p>}
-                {thinkingPlan?.status === 'ready' && thinkingPlan.lines.length === 0 && <p className="text-[11px] text-slate-400">O motor não retornou variantes detalhadas para esta posição.</p>}
+                {!thinkingPlan && <p className="text-[11px] text-slate-400">{t('Quando chegar a vez do computador, mostraremos as principais linhas calculadas e alternativas consideradas.')}</p>}
+                {thinkingPlan?.status === 'thinking' && <p className="text-[11px] text-slate-400">{t('O motor está comparando lances candidatos, respostas e posições futuras. As variantes aparecem quando a busca terminar.')}</p>}
+                {thinkingPlan?.status === 'ready' && thinkingPlan.lines.length === 0 && <p className="text-[11px] text-slate-400">{t('O motor não retornou variantes detalhadas para esta posição.')}</p>}
                 {thinkingPlan?.status === 'ready' && thinkingPlan.lines.length > 0 && (
                   <div className="space-y-2">
                     {thinkingPlan.lines.slice(0, 3).map((line) => (
                       <div key={String(line.multipv) + '-' + line.pv.join('-')} className="rounded-lg bg-slate-950/70 border border-slate-800 px-2.5 py-2">
                         <div className="flex items-center justify-between gap-2 mb-1">
-                          <span className="text-[10px] font-semibold text-amber-300">{line.multipv === 1 ? 'Plano principal' : 'Alternativa ' + line.multipv}</span>
-                          <span className="text-[10px] text-slate-500">{line.depth ? 'Profundidade ' + line.depth : 'Livro de aberturas'}{line.mate !== undefined ? ' · mate em ' + line.mate : line.cp !== undefined ? ' · avaliação ' + (line.cp / 100).toFixed(2) + ' (lado a jogar)' : ''}</span>
+                          <span className="text-[10px] font-semibold text-amber-300">{line.multipv === 1 ? t('Plano principal') : t('Alternativa ') + line.multipv}</span>
+                          <span className="text-[10px] text-slate-500" >{line.depth ? t('Profundidade') + ' ' + line.depth : t('Livro de aberturas')}{line.mate !== undefined ? ' · ' + t('mate in') + ' ' + line.mate : line.cp !== undefined ? ' · ' + t('avaliação') + ' ' + (line.cp / 100).toFixed(2) + ' (' + t('lado a jogar') + ')' : ''}</span>
                         </div>
-                        <p className="font-mono text-[11px] leading-relaxed text-slate-200 break-words">{line.pv.join(' ') || 'Variante indisponível'}</p>
+                        <p className="font-mono text-[11px] leading-relaxed text-slate-200 break-words">{line.pv.join(' ') || t('Variante indisponível')}</p>
                       </div>
                     ))}
-                    <p className="text-[10px] text-slate-500">São variantes calculadas pelo motor, não uma explicação de intenção humana. O resultado pode mudar com mais tempo de busca ou após a resposta do jogador.</p>
+                    <p className="text-[10px] text-slate-500">{t('São variantes calculadas pelo motor, não uma explicação de intenção humana. O resultado pode mudar com mais tempo de busca ou após a resposta do jogador.')}</p>
                   </div>
                 )}
               </section>
@@ -803,14 +805,14 @@ export default function App() {
               <div className="flex items-center justify-between w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs">
                 <div className="flex items-center gap-2.5">
                   <div className="w-7 h-7 rounded-lg bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-300 font-bold text-xs">
-                    VOCÊ
+                    {t('VOCÊ')}
                   </div>
                   <div>
                     <div className="font-bold text-slate-100">
-                      Você ({playerColor === 'w' ? 'Brancas' : 'Pretas'})
+                      {t('Você')} ({playerColor === 'w' ? t('Brancas') : t('Pretas')})
                     </div>
                     <div className="text-[10px] text-slate-400 font-mono">
-                      Rating Tático: {playerStats.tacticalRating} Elo
+                      {t('Rating Tático:')} {playerStats.tacticalRating} Elo
                     </div>
                   </div>
                 </div>
@@ -831,7 +833,7 @@ export default function App() {
                     className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700 disabled:opacity-40 transition-colors"
                   >
                     <RotateCcw className="w-3 h-3" />
-                    <span>Desfazer</span>
+                    <span>{t('Desfazer')}</span>
                   </button>
                   {moves.length >= 2 && (
                     <button
@@ -840,7 +842,7 @@ export default function App() {
                       title="Gráfico de Precisão e Relatório da Partida"
                     >
                       <BarChart2 className="w-3 h-3 text-indigo-400" />
-                      <span>Relatório</span>
+                      <span>{t('Relatório')}</span>
                     </button>
                   )}
                   <button
@@ -849,7 +851,7 @@ export default function App() {
                     title="Girar Tabuleiro"
                   >
                     <RefreshCw className="w-3 h-3" />
-                    <span>Girar</span>
+                    <span>{t('Girar')}</span>
                   </button>
                 </div>
               </div>
@@ -861,7 +863,7 @@ export default function App() {
               {gameOver.isOver && (
                 <div className="p-4 rounded-xl bg-slate-900 border border-amber-500/50 shadow-xl flex flex-col gap-2.5 text-center">
                   <Trophy className="w-7 h-7 text-amber-400 mx-auto" />
-                  <h3 className="text-base font-bold text-slate-100">{gameOver.message}</h3>
+                  <h3 className="text-base font-bold text-slate-100">{gameOver.message ? t(gameOver.message) : ''}</h3>
                   <p className="text-xs text-slate-400">
                     A partida foi finalizada! Veja o gráfico de precisão lance a lance e momentos críticos.
                   </p>
@@ -980,7 +982,7 @@ export default function App() {
         botName={BOT_CONFIGS[botLevel].name}
         botElo={BOT_CONFIGS[botLevel].elo}
         timeControl={timeControl.name}
-        gameOverMessage={gameOver.message}
+        gameOverMessage={gameOver.message ? t(gameOver.message) : ''}
         winner={gameOver.winner}
         onReviewMove={(moveIdx) => {
           handleSelectHistoryMove(moveIdx);
