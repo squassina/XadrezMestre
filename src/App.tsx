@@ -5,7 +5,7 @@ import {
   PieceSet, BoardTheme
 } from './types/chess';
 import { analyzeMove, analyzeMoveAsync, getBotMove, evaluateBoard, detectBlunderCategory, BOT_CONFIGS } from './utils/engine';
-import { botMove, analyzeMoveRemote, BOT_ENGINE, warmUp, API_BASE_URL } from './utils/remoteEngine';
+import { botMove, analyzeMoveRemote, BOT_ENGINE, warmUp, API_BASE_URL, uciPvToSan, EngineLine } from './utils/remoteEngine';
 import { soundEffects } from './utils/sound';
 import { TIME_CONTROLS, DEFAULT_TIME_CONTROL } from './data/timeControls';
 import { TopNav, NavTab } from './components/TopNav';
@@ -90,6 +90,10 @@ export default function App() {
   const [chess, setChess] = useState<Chess>(new Chess());
   const [playerColor, setPlayerColor] = useState<'w' | 'b'>('w');
   const [botLevel, setBotLevel] = useState<BotLevel>('intermediate');
+  const [maxQuiescenceDepth, setMaxQuiescenceDepth] = useState<number>(() => {
+    try { return Math.max(1, Math.min(12, Number(localStorage.getItem('xadrez_max_quiescence_depth') || 6))); } catch { return 6; }
+  });
+  const [thinkingPlan, setThinkingPlan] = useState<{ status: 'thinking' | 'ready'; engine: string; ms?: number; lines: Array<{ multipv: number; depth: number; pv: string[]; cp?: number; mate?: number }>; source?: 'stockfish' | 'interno' | 'book' } | null>(null);
   const [coachInterruption, setCoachInterruption] = useState(true);
   const [showEvalBar, setShowEvalBar] = useState(true);
 
@@ -243,6 +247,7 @@ export default function App() {
     showEvalBar: newEval,
     timeControl: newTimeControl,
     pieceSet: newPieceSet,
+    maxQuiescenceDepth: newMaxQuiescenceDepth,
   }: {
     botLevel: BotLevel;
     playerColor: 'w' | 'b';
@@ -250,6 +255,7 @@ export default function App() {
     showEvalBar: boolean;
     timeControl: TimeControl;
     pieceSet?: PieceSet;
+    maxQuiescenceDepth: number;
   }) => {
     if (newPieceSet) {
       handleSelectPieceSet(newPieceSet);
@@ -260,6 +266,9 @@ export default function App() {
     setHistoryIndex(-1);
     setPlayerColor(newColor);
     setBotLevel(newLevel);
+    setMaxQuiescenceDepth(newMaxQuiescenceDepth);
+    try { localStorage.setItem('xadrez_max_quiescence_depth', String(newMaxQuiescenceDepth)); } catch {}
+    setThinkingPlan(null);
     setCoachInterruption(newCoach);
     setShowEvalBar(newEval);
     setTimeControl(newTimeControl);
@@ -327,6 +336,7 @@ export default function App() {
   // Bot move logic with Stockfish and Opening Book integration
   const makeBotMove = useCallback((currentGame: Chess, currentBot: BotLevel, currentMoveList: AnalyzedMove[]) => {
     setIsBotThinking(true);
+    setThinkingPlan({ status: 'thinking', engine: 'Stockfish', lines: [] });
     botAbortRef.current?.abort();
     const ctrl = new AbortController();
     botAbortRef.current = ctrl;
@@ -342,6 +352,9 @@ export default function App() {
 
         // 1. Check opening book first (main lines in first 10-15 moves)
         let chosenMove: Move | null = null;
+        let planLines: EngineLine[] = [];
+        let planEngine = 'Livro de aberturas';
+        let planMs = 0;
         const bookEntry = getOpeningForPosition(fen);
         const bookMoveObj = canUseOpeningBook(currentBot, currentGame.history().length)
           ? getBookMove(fen)
@@ -356,7 +369,14 @@ export default function App() {
 
         // 2. If no book move, call botMove (Stockfish API with local search fallback)
         if (!chosenMove) {
-          const remoteChoice = await botMove(fen, BOT_ENGINE[currentBot], ctrl.signal);
+          const baseSettings = BOT_ENGINE[currentBot];
+          const adjustedSettings = currentBot === 'beginner'
+            ? { ...baseSettings, skill: Math.max(0, Math.min(20, (baseSettings.skill ?? 0) + (maxQuiescenceDepth - 6) * 2)), maxQuiescenceDepth }
+            : { ...baseSettings, elo: Math.max(1320, Math.min(3190, (baseSettings.elo ?? BOT_CONFIGS[currentBot].elo) + (maxQuiescenceDepth - 6) * 80)), maxQuiescenceDepth };
+          const remoteChoice = await botMove(fen, adjustedSettings, ctrl.signal);
+          planLines = remoteChoice.lines;
+          planEngine = remoteChoice.engine;
+          planMs = remoteChoice.ms;
           if (ctrl.signal.aborted) return;
           const match = legalMoves.find(
             (m) => m.from === remoteChoice.from && m.to === remoteChoice.to && (m.promotion ?? '') === (remoteChoice.promotion ?? '')
@@ -368,6 +388,12 @@ export default function App() {
           setIsBotThinking(false);
           return;
         }
+
+        const planPv = planLines.map((line) => ({ ...line, pv: uciPvToSan(fen, line.pv).slice(0, 6) }));
+        if (bookMoveObj && chosenMove) {
+          planPv.unshift({ multipv: 1, depth: 0, pv: [chosenMove.san], cp: undefined, mate: undefined });
+        }
+        setThinkingPlan({ status: 'ready', engine: planEngine, ms: planMs, lines: planPv, source: bookMoveObj ? 'book' : planEngine.includes('interno') ? 'interno' : 'stockfish' });
 
         const chessBeforeBot = new Chess(fen);
         const newGame = new Chess(fen);
@@ -436,7 +462,7 @@ export default function App() {
     };
 
     executeBotTurn();
-  }, [checkGameOverStatus, playerColor, timeControl.incrementSeconds]);
+  }, [checkGameOverStatus, playerColor, timeControl.incrementSeconds, maxQuiescenceDepth]);
 
   // Handle Player Move - Zero-Lag Optimistic Execution
   const handlePlayerMove = useCallback(({ from, to, promotion }: { from: Square; to: Square; promotion?: string }) => {
@@ -742,6 +768,36 @@ export default function App() {
                 </div>
               </div>
 
+
+              {/* Engine thinking / principal variations */}
+              <section className="w-full max-w-[560px] mx-auto rounded-xl border border-slate-800 bg-slate-900/90 p-3" aria-live="polite">
+                <div className="flex items-center justify-between gap-3 mb-2">
+                  <h3 className="text-xs font-bold text-slate-100 flex items-center gap-2">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                    Como o computador está pensando
+                  </h3>
+                  {thinkingPlan?.status === 'thinking' && <span className="text-[10px] text-amber-300 animate-pulse">Calculando variantes…</span>}
+                  {thinkingPlan?.status === 'ready' && <span className="text-[10px] text-slate-500">{thinkingPlan.engine}{thinkingPlan.ms ? ' · ' + thinkingPlan.ms + ' ms' : ''}</span>}
+                </div>
+                {!thinkingPlan && <p className="text-[11px] text-slate-400">Quando chegar a vez do computador, mostraremos as principais linhas calculadas e alternativas consideradas.</p>}
+                {thinkingPlan?.status === 'thinking' && <p className="text-[11px] text-slate-400">O motor está comparando lances candidatos, respostas e posições futuras. As variantes aparecem quando a busca terminar.</p>}
+                {thinkingPlan?.status === 'ready' && thinkingPlan.lines.length === 0 && <p className="text-[11px] text-slate-400">O motor não retornou variantes detalhadas para esta posição.</p>}
+                {thinkingPlan?.status === 'ready' && thinkingPlan.lines.length > 0 && (
+                  <div className="space-y-2">
+                    {thinkingPlan.lines.slice(0, 3).map((line) => (
+                      <div key={String(line.multipv) + '-' + line.pv.join('-')} className="rounded-lg bg-slate-950/70 border border-slate-800 px-2.5 py-2">
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <span className="text-[10px] font-semibold text-amber-300">{line.multipv === 1 ? 'Plano principal' : 'Alternativa ' + line.multipv}</span>
+                          <span className="text-[10px] text-slate-500">{line.depth ? 'Profundidade ' + line.depth : 'Livro de aberturas'}{line.mate !== undefined ? ' · mate em ' + line.mate : line.cp !== undefined ? ' · avaliação ' + (line.cp / 100).toFixed(2) : ''}</span>
+                        </div>
+                        <p className="font-mono text-[11px] leading-relaxed text-slate-200 break-words">{line.pv.join(' ') || 'Variante indisponível'}</p>
+                      </div>
+                    ))}
+                    <p className="text-[10px] text-slate-500">São variantes calculadas pelo motor, não uma explicação de intenção humana. O resultado pode mudar com mais tempo de busca ou após a resposta do jogador.</p>
+                  </div>
+                )}
+              </section>
+
               {/* Player Info Strip */}
               <div className="flex items-center justify-between w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs">
                 <div className="flex items-center gap-2.5">
@@ -910,6 +966,7 @@ export default function App() {
         currentPlayerColor={playerColor}
         currentCoachInterruption={coachInterruption}
         currentShowEvalBar={showEvalBar}
+        currentMaxQuiescenceDepth={maxQuiescenceDepth}
         gameInProgress={moves.length > 0 && !gameOver.isOver}
       />
 
