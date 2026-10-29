@@ -201,7 +201,7 @@ export const GameReportModal: React.FC<GameReportModalProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-lg sm:text-xl font-bold tracking-tight">
-                  Relatório de Análise da Partida
+                  {t('Relatório de Análise da Partida')}
                 </h2>
                 {timeControl && (
                   <span className="text-xs px-2 py-0.5 rounded-full font-mono bg-slate-800 text-slate-300 border border-slate-700">
@@ -232,11 +232,11 @@ export const GameReportModal: React.FC<GameReportModalProps> = ({
                   {playerAccuracy}%
                 </span>
                 <span className="text-xs text-slate-400">
-                  {playerAccuracy >= 85 ? '🌟 Nível Mestre' : playerAccuracy >= 70 ? '👍 Bom Desempenho' : '⚡ Oportunidade de Melhora'}
+                  {playerAccuracy >= 85 ? t('🌟 Nível Mestre') : playerAccuracy >= 70 ? t('👍 Bom Desempenho') : t('⚡ Oportunidade de Melhora')}
                 </span>
               </div>
               <p className="text-[11px] text-slate-400 mt-1">
-                Você jogou com as {playerColor === 'w' ? 'Brancas' : 'Pretas'}
+                {t('Você jogou com as')} {playerColor === 'w' ? t('Brancas') : t('Pretas')}
               </p>
             </div>
 
@@ -272,7 +272,7 @@ export const GameReportModal: React.FC<GameReportModalProps> = ({
         <div className="bg-slate-950/70 border border-slate-800 rounded-xl p-3.5">
           <div className="text-xs font-semibold text-slate-300 mb-2 flex items-center justify-between">
             <span>{t('Classificação dos Lances')}</span>
-            <span className="text-[11px] text-slate-400">Você vs {botName}</span>
+            <span className="text-[11px] text-slate-400">{t('Você vs')} {t(botName)}</span>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 text-center text-xs">
@@ -295,7 +295,7 @@ export const GameReportModal: React.FC<GameReportModalProps> = ({
             </div>
 
             <div className="p-2 rounded-lg bg-amber-950/30 border border-amber-800/40">
-              <span className="text-[11px] text-amber-400 block font-bold">?! Imprecisões</span>
+              <span className="text-[11px] text-amber-400 block font-bold">{t('?! Imprecisões')}</span>
               <span className="font-mono font-bold text-amber-300">{playerBreakdown.inaccuracy}</span>
               <span className="text-[10px] text-slate-400 block">vs {botBreakdown.inaccuracy}</span>
             </div>
@@ -320,17 +320,17 @@ export const GameReportModal: React.FC<GameReportModalProps> = ({
             <div className="flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-amber-400" />
               <h3 className="text-xs font-bold text-slate-200">
-                Gráfico de Avaliação da Engine & Oscilações Críticas
+                {t('Gráfico de Avaliação da Engine & Oscilações Críticas')}
               </h3>
             </div>
             <div className="flex items-center gap-3 text-[10px] font-mono text-slate-400">
               <span className="flex items-center gap-1">
                 <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
-                Gafe / Oscilação Brusca
+                {t('Gafe / Oscilação Brusca')}
               </span>
               <span className="flex items-center gap-1">
                 <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
-                Erro Tático
+                {t('Erro Tático')}
               </span>
             </div>
           </div>
@@ -439,7 +439,7 @@ export const GameReportModal: React.FC<GameReportModalProps> = ({
               </ResponsiveContainer>
             ) : (
               <div className="h-full flex items-center justify-center text-xs text-slate-500 italic">
-                Nenhum lance registrado para gerar o gráfico.
+                {t('Nenhum lance registrado para gerar o gráfico.')}
               </div>
             )}
           </div>
@@ -470,7 +470,7 @@ export const GameReportModal: React.FC<GameReportModalProps> = ({
                         </span>
                       </div>
                       <div className="text-[11px] text-slate-400 mt-0.5">
-                        Por: <strong>{swing.player}</strong> · Oscilação de ±{swing.evalDiffPawns} peões
+                        {t('Por:')} <strong>{t(swing.player)}</strong> · {t('Oscilação de ±')}{swing.evalDiffPawns} {t('peões')}
                       </div>
                     </div>
 
