@@ -257,6 +257,12 @@ const translations: Record<string, string> = {
   "2. Desenvolva Peças Menores: Cavalos e Bispos devem entrar em jogo primeiro.": "2. Develop Minor Pieces: Bring knights and bishops into play first.",
   "3. Roque Cedo: Coloque o rei em segurança e conecte suas torres antes de abrir o centro.": "3. Castle Early: Keep your king safe and connect your rooks before opening the center.",
   "Não mova a mesma peça duas vezes na abertura a menos que seja para uma captura vantajosa.": "Do not move the same piece twice in the opening unless it wins material.",
+  "Livro de aberturas": "Opening book",
+  "mate in": "mate in",
+  "avaliação": "evaluation",
+  "lado a jogar": "side to move",
+  "São variantes calculadas pelo motor, não uma explicação de intenção humana. O resultado pode mudar com mais tempo de busca ou após a resposta do jogador.": "These are engine-calculated variations, not an explanation of human intent. The result may change with more search time or after the player responds.",
+  "Interno": "Built-in engine",
 };
 
 const I18nContext = createContext<TranslationContextValue | null>(null);
