@@ -87,7 +87,6 @@ export const TopNav: React.FC<TopNavProps> = ({
           >
             <option value="staunty">Peças: Staunty</option>
             <option value="cburnett">Peças: Cburnett</option>
-            <option value="modern">Peças: Modern-minimalist</option>
             <option value="merida">Peças: Merida</option>
             <option value="alpha">Peças: Alpha</option>
           </select>
