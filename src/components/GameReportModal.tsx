@@ -277,19 +277,19 @@ export const GameReportModal: React.FC<GameReportModalProps> = ({
 
           <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 text-center text-xs">
             <div className="p-2 rounded-lg bg-cyan-950/30 border border-cyan-800/40">
-              <span className="text-[11px] text-cyan-400 block font-bold">!! Brilhantes</span>
+              <span className="text-[11px] text-cyan-400 block font-bold">!! {t('Brilhantes')}</span>
               <span className="font-mono font-bold text-slate-100">{playerBreakdown.brilliant}</span>
               <span className="text-[10px] text-slate-400 block">vs {botBreakdown.brilliant}</span>
             </div>
 
             <div className="p-2 rounded-lg bg-emerald-950/30 border border-emerald-800/40">
-              <span className="text-[11px] text-emerald-400 block font-bold">! Melhores</span>
+              <span className="text-[11px] text-emerald-400 block font-bold">! {t('Melhores')}</span>
               <span className="font-mono font-bold text-slate-100">{playerBreakdown.best}</span>
               <span className="text-[10px] text-slate-400 block">vs {botBreakdown.best}</span>
             </div>
 
             <div className="p-2 rounded-lg bg-slate-900 border border-slate-800">
-              <span className="text-[11px] text-slate-300 block font-bold">👍 Bons</span>
+              <span className="text-[11px] text-slate-300 block font-bold">👍 {t('Bons')}</span>
               <span className="font-mono font-bold text-slate-100">{playerBreakdown.good}</span>
               <span className="text-[10px] text-slate-400 block">vs {botBreakdown.good}</span>
             </div>
@@ -301,13 +301,13 @@ export const GameReportModal: React.FC<GameReportModalProps> = ({
             </div>
 
             <div className="p-2 rounded-lg bg-orange-950/30 border border-orange-800/40">
-              <span className="text-[11px] text-orange-400 block font-bold">? Erros</span>
+              <span className="text-[11px] text-orange-400 block font-bold">? {t('Erros')}</span>
               <span className="font-mono font-bold text-orange-300">{playerBreakdown.mistake}</span>
               <span className="text-[10px] text-slate-400 block">vs {botBreakdown.mistake}</span>
             </div>
 
             <div className="p-2 rounded-lg bg-rose-950/30 border border-rose-800/40">
-              <span className="text-[11px] text-rose-400 block font-bold">?? Gafes</span>
+              <span className="text-[11px] text-rose-400 block font-bold">?? {t('Gafes')}</span>
               <span className="font-mono font-bold text-rose-400">{playerBreakdown.blunder}</span>
               <span className="text-[10px] text-slate-400 block">vs {botBreakdown.blunder}</span>
             </div>
@@ -481,7 +481,7 @@ export const GameReportModal: React.FC<GameReportModalProps> = ({
                       }}
                       className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-medium shrink-0 flex items-center gap-1 border border-slate-700 transition-all"
                     >
-                      <span>Revisar</span>
+                      <span>{t('Revisar')}</span>
                       <ChevronRight className="w-3 h-3" />
                     </button>
                   </div>
