@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useCallback, useMemo, useRef, useLayoutEffect } from 'react';
 import { motion, AnimatePresence, useMotionValue } from 'framer-motion';
 import { Chess, Square, PieceSymbol } from 'chess.js';
 import { ChessPiece } from './ChessPiece';
@@ -270,13 +270,27 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
     }
 
     currentSquares.forEach((item) => {
-      let match = prevPiecesRef.current.find(
-        (prev) =>
-          !usedPrevIds.has(prev.id) &&
-          prev.type === item.type &&
-          prev.color === item.color &&
-          (lastMove ? prev.square === lastMove.from && item.square === lastMove.to : prev.square === item.square)
-      );
+      // Preserve the moving piece identity, then prefer pieces that remain on
+      // their current squares before falling back to same-type/color matching.
+      let match = lastMove && item.square === lastMove.to
+        ? prevPiecesRef.current.find(
+            (prev) =>
+              !usedPrevIds.has(prev.id) &&
+              prev.square === lastMove.from &&
+              prev.type === item.type &&
+              prev.color === item.color
+          )
+        : undefined;
+
+      if (!match) {
+        match = prevPiecesRef.current.find(
+          (prev) =>
+            !usedPrevIds.has(prev.id) &&
+            prev.square === item.square &&
+            prev.type === item.type &&
+            prev.color === item.color
+        );
+      }
 
       if (!match) {
         match = prevPiecesRef.current.find(
@@ -307,9 +321,13 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
       }
     });
 
-    prevPiecesRef.current = newPieces;
     return newPieces;
   }, [chess.fen(), displayFiles, displayRanks, lastMove]);
+
+  // Commit the latest identities after render, not while useMemo is calculating.
+  useLayoutEffect(() => {
+    prevPiecesRef.current = animatedPieces;
+  }, [animatedPieces]);
 
   const executeMove = useCallback(
     (from: Square, to: Square, promotion?: string) => {
@@ -580,20 +598,21 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
                     }
               }
               style={{
-                willChange: 'transform',
                 top: 0,
                 left: 0,
               }}
               onPointerDown={(e) => handlePointerDownPiece(e, p.square)}
               onClick={() => handleSquareClick(p.square)}
-              className="absolute w-[12.5%] h-[12.5%] p-1.5 flex items-center justify-center z-20 cursor-grab active:cursor-grabbing piece-shadow hover:scale-105 transition-transform"
+              className="absolute w-[12.5%] h-[12.5%] p-1.5 flex items-center justify-center z-20 cursor-grab active:cursor-grabbing piece-shadow"
             >
-              <ChessPiece
-                type={p.type}
-                color={p.color}
-                set={pieceSet}
-                customBasePath={customBasePath}
-              />
+              <div className="w-full h-full transition-transform duration-150 hover:scale-105">
+                <ChessPiece
+                  type={p.type}
+                  color={p.color}
+                  set={pieceSet}
+                  customBasePath={customBasePath}
+                />
+              </div>
             </motion.div>
           );
         })}

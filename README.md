@@ -1,32 +1,26 @@
-# XadrezMestre — patch de calibragem de dificuldade
+# XadrezMestre — correção inicial da animação
 
-Base analisada: `main` em `a936f903c9a03bb2c981cfa67fe53ee101e0c31b`.
+Patch direcionado a `src/components/ChessBoard.tsx`.
 
-## Achados prioritários
+## O que muda
 
-1. `src/utils/remoteEngine.ts`: o fallback local executa sempre `searchBestMove(chess, 4, 600)`, ignorando o nível selecionado.
-2. `src/App.tsx`: o livro de aberturas prevalece sobre o nível, inclusive para o iniciante.
-3. `server/engine.ts`: `depth` definido faz o backend ignorar `movetime`. O perfil iniciante envia ambos, logo o tempo configurado não é utilizado.
-4. Elo exibido na UI e parâmetros enviados ao Stockfish diferem; esses números precisam ser tratados como perfis aproximados, não como rating medido.
+- Evita que o `hover:scale-105` do Tailwind concorra com o `transform` controlado pelo Framer Motion: o hover passa a ocorrer em um elemento filho.
+- Corrige a associação de identidade das peças: primeiro identifica o lance origem/destino, depois preserva peças que continuam na mesma casa e só então usa correspondência por tipo/cor. Isso evita que torres/cavalos/bispos idênticos troquem de identidade visual sem necessidade.
+- Remove a mutação de `prevPiecesRef` dentro de `useMemo` e atualiza a referência após o commit com `useLayoutEffect`.
+- Remove `will-change: transform` permanente de todas as peças para evitar forçar camadas de composição desnecessárias.
 
-## Arquivos de patch
+## Aplicação
 
-- `src/utils/remoteEngine.ts`: versão completa proposta que corrige fallback fixo, aplica profundidade/tempo por perfil e valida legalidade do lance remoto. `apply-to-main.patch` é um diff parcial de referência; prefira integrar o módulo completo e revisar o código com testes.
-- `opening-book.patch`: limita livro de aberturas por nível.
-- `server-search.patch`: torna a precedência de `depth`/`movetime` explícita.
-- `src/utils/difficulty.ts`: perfis de dificuldade centralizados propostos.
-- `src/utils/difficulty.test.ts`: testes para monotonicidade dos perfis e limites do livro (requer Vitest adicionado ao projeto de testes).
-- `src/utils/remoteEngine.ts`: versão completa proposta do cliente remoto/fallback.
-- `server/engine.ts.notes`: orientação para backend.
+Aplique na raiz do repositório:
 
-## Bloqueio de execução
+```bash
+git switch -c fix/smooth-chess-piece-animation
+git apply 0001-fix-chess-piece-animation.patch
+npm ci
+npm run lint
+npm run build
+```
 
-Não foram feitas alterações no GitHub. O conector retorna `403 Resource not accessible by integration` ao criar branch, issue ou arquivo, apesar de informar `push/admin` nas permissões do repositório. O clone via shell falhou por indisponibilidade de DNS para `github.com`. Portanto não consegui executar `npm run lint`, `npm run build` ou os testes da branch. A PR não foi criada e `main` permaneceu intacta.
+## Limitações / validação pendente
 
-## Recomendações antes de merge
-
-1. Aplicar os patches em uma branch dedicada e revisar o diff.
-2. Adicionar runner de testes (o `package.json` não possui script/test runner no estado inspecionado) ou adaptar os testes ao runner já usado no ambiente do projeto.
-3. Executar `npm ci`, `npm run lint` e `npm run build`.
-4. Testar partidas usando o motor remoto e, separadamente, desligando a API para validar o fallback de cada nível.
-5. Ajustar os tempos/Elo com partidas reais; desempenho não permite afirmar ELO exato sem medição.
+Este ambiente não conseguiu criar uma branch remota: a integração GitHub retornou `403 Resource not accessible by integration`. O clone também falhou por resolução DNS de `github.com`. Por isso, o patch ainda não foi aplicado no repositório e `npm run lint`, `npm run build` e testes de browser não foram executados. Validar especialmente movimentos normais, capturas, roque, promoção, desfazer/refazer e movimento do jogador de pretas.
