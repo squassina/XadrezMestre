@@ -21,6 +21,7 @@ import { MistakeAnalytics } from './components/MistakeAnalytics';
 import { ChessPrinciples } from './components/ChessPrinciples';
 import { NewGameModal } from './components/NewGameModal';
 import { GameReportModal } from './components/GameReportModal';
+import { useI18n } from './i18n';
 import {
   RotateCcw, Sparkles, Trophy, Lightbulb, RefreshCw, Flag,
   HelpCircle, ChevronRight, User, Bot, AlertTriangle, Timer, Zap, Flame, Clock, BarChart2
@@ -49,7 +50,7 @@ const DEFAULT_STATS: PlayerStats = {
   recentMistakes: [],
 };
 
-export default function App() {
+export default function App() {\n  const { t } = useI18n();
   const [activeTab, setActiveTab] = useState<NavTab>('game');
   const [boardTheme, setBoardTheme] = useState<BoardTheme>(() => {
     try {
@@ -720,7 +721,7 @@ export default function App() {
                     </div>
                     <div className="text-[10px] text-slate-400">
                       {isBotThinking ? (
-                        <span className="text-amber-400 font-medium animate-pulse">Calculando lance...</span>
+                        <span className="text-amber-400 font-medium animate-pulse">{t('Calculando lance...')}</span>
                       ) : (
                         <span>{playerColor === 'w' ? 'Pretas' : 'Brancas'} · {botConfig.title}</span>
                       )}
@@ -777,12 +778,12 @@ export default function App() {
                     <Sparkles className="w-3.5 h-3.5 text-amber-400" />
                     Como o computador está pensando
                   </h3>
-                  {thinkingPlan?.status === 'thinking' && <span className="text-[10px] text-amber-300 animate-pulse">Calculando variantes…</span>}
+                  {thinkingPlan?.status === 'thinking' && <span className="text-[10px] text-amber-300 animate-pulse">{t('Calculando variantes…')}</span>}
                   {thinkingPlan?.status === 'ready' && <span className="text-[10px] text-slate-500">{thinkingPlan.engine}{thinkingPlan.ms ? ' · ' + thinkingPlan.ms + ' ms' : ''}</span>}
                 </div>
                 {!thinkingPlan && <p className="text-[11px] text-slate-400">Quando chegar a vez do computador, mostraremos as principais linhas calculadas e alternativas consideradas.</p>}
                 {thinkingPlan?.status === 'thinking' && <p className="text-[11px] text-slate-400">O motor está comparando lances candidatos, respostas e posições futuras. As variantes aparecem quando a busca terminar.</p>}
-                {thinkingPlan?.status === 'ready' && thinkingPlan.lines.length === 0 && <p className="text-[11px] text-slate-400">O motor não retornou variantes detalhadas para esta posição.</p>}
+                {thinkingPlan?.status === 'ready' && thinkingPlan.lines.length === 0 && <p className="text-[11px] text-slate-400">{t('O motor não retornou variantes detalhadas para esta posição.')}</p>}
                 {thinkingPlan?.status === 'ready' && thinkingPlan.lines.length > 0 && (
                   <div className="space-y-2">
                     {thinkingPlan.lines.slice(0, 3).map((line) => (
@@ -831,7 +832,7 @@ export default function App() {
                     className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700 disabled:opacity-40 transition-colors"
                   >
                     <RotateCcw className="w-3 h-3" />
-                    <span>Desfazer</span>
+                    <span>{t('Desfazer')}</span>
                   </button>
                   {moves.length >= 2 && (
                     <button
@@ -840,7 +841,7 @@ export default function App() {
                       title="Gráfico de Precisão e Relatório da Partida"
                     >
                       <BarChart2 className="w-3 h-3 text-indigo-400" />
-                      <span>Relatório</span>
+                      <span>{t('Relatório')}</span>
                     </button>
                   )}
                   <button
@@ -849,7 +850,7 @@ export default function App() {
                     title="Girar Tabuleiro"
                   >
                     <RefreshCw className="w-3 h-3" />
-                    <span>Girar</span>
+                    <span>{t('Girar')}</span>
                   </button>
                 </div>
               </div>
