@@ -67,7 +67,7 @@ export const OpeningBookPanel: React.FC<OpeningBookPanelProps> = ({
       {/* Candidate Main-Line Moves */}
       <div className="space-y-1.5 pt-1">
         <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-          Lances Principais do Livro (Mestres)
+          {t('Lances Principais do Livro (Mestres)')}
         </span>
         <div className="grid grid-cols-1 gap-1.5">
           {opening.moves.map((m, idx) => {
