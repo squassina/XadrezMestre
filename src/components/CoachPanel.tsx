@@ -29,7 +29,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
         <Sparkles className="w-8 h-8 text-amber-400/60 mb-2" />
         <h3 className="text-sm font-semibold text-slate-200">{t('Treinador em Tempo Real Ativo')}</h3>
         <p className="text-xs text-slate-400 mt-1 max-w-sm">
-          Jogue seus lances no tabuleiro. O treinador alertará imediatamente sobre gafes, peças penduradas e oportunidades táticas!
+          {t('Jogue seus lances no tabuleiro. O treinador alertará imediatamente sobre gafes, peças penduradas e oportunidades táticas!')}
         </p>
       </div>
     );
@@ -115,9 +115,9 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
                 )}
               </p>
             ) : isPositive ? (
-              <p>Excelente lance! Mantém pressão central e ótima coordenação de peças.</p>
+              <p>{t('Excelente lance! Mantém pressão central e ótima coordenação de peças.')}</p>
             ) : (
-              <p>Lance jogável, mas havia alternativas com maior dinamismo.</p>
+              <p>{t('Lance jogável, mas havia alternativas com maior dinamismo.')}</p>
             )}
           </div>
         )}
