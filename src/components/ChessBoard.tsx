@@ -133,7 +133,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
   boardTheme,
   pieceSet = 'staunty',
   customBasePath = DEFAULT_BASE_PATH,
-  disableAnimations = false,
+  disableAnimations = true,
 }) => {
   const boardRef = useRef<HTMLDivElement>(null);
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
