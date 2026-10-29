@@ -149,7 +149,7 @@ Return immediate, constructive feedback as strict JSON:
       }
     }
 
-    const fallback = generateFallbackExplanation(blunderCategory || 'Imprecisão', san, bestSan, evalDiff);
+    const fallback = generateFallbackExplanation(blunderCategory || 'Imprecisão', san, bestSan, evalDiff, language);
     return res.json({ ...fallback, isAiGenerated: false });
   } catch (error) {
     console.error('Error generating coach feedback:', error);
