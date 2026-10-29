@@ -86,10 +86,9 @@ export const TopNav: React.FC<TopNavProps> = ({
             title="Escolha o estilo das peças"
           >
             <option value="staunty">Peças: Staunty</option>
-            <option value="modern-minimalist">Peças: Modern-Minimalist</option>
+            <option value="modern">Peças: Modern</option>
             <option value="merida">Peças: Merida</option>
             <option value="alpha">Peças: Alpha</option>
-            <option value="cburnett">Peças: cburnett</option>
           </select>
 
           {/* Board Theme Selector */}
