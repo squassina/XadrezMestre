@@ -58,16 +58,17 @@ function tick() {
   if ((++nodes & 1023) === 0 && Date.now() > deadline) stopped = true;
 }
 
-function qsearch(chess: Chess, alpha: number, beta: number): number {
+function qsearch(chess: Chess, alpha: number, beta: number, qDepth = 0, maxQuiescenceDepth = 8): number {
   tick();
   if (stopped) return 0;
   const stand = evalStm(chess);
   if (stand >= beta) return beta;
   if (stand > alpha) alpha = stand;
+  if (qDepth >= maxQuiescenceDepth) return alpha;
   const tactical = chess.moves().filter((m) => m.includes('x') || m.includes('='));
   for (const m of order(chess, tactical, undefined, 0)) {
     chess.move(m);
-    const sc = -qsearch(chess, -beta, -alpha);
+    const sc = -qsearch(chess, -beta, -alpha, qDepth + 1, maxQuiescenceDepth);
     chess.undo();
     if (stopped) return 0;
     if (sc >= beta) return beta;
@@ -80,14 +81,14 @@ function qsearch(chess: Chess, alpha: number, beta: number): number {
 const toTT = (s: number, ply: number) => (s > MATE - 1000 ? s + ply : s < -MATE + 1000 ? s - ply : s);
 const fromTT = (s: number, ply: number) => (s > MATE - 1000 ? s - ply : s < -MATE + 1000 ? s + ply : s);
 
-function negamax(chess: Chess, depth: number, alpha: number, beta: number, ply: number): number {
+function negamax(chess: Chess, depth: number, alpha: number, beta: number, ply: number, maxQuiescenceDepth: number): number {
   tick();
   if (stopped) return 0;
   if (ply > 0 && chess.isDraw()) return 0;
 
   const inCheck = chess.inCheck();
   if (inCheck) depth++; // extensão de xeque
-  if (depth <= 0) return qsearch(chess, alpha, beta);
+  if (depth <= 0) return qsearch(chess, alpha, beta, 0, maxQuiescenceDepth);
 
   const k = key(chess);
   const e = tt.get(k);
@@ -107,7 +108,7 @@ function negamax(chess: Chess, depth: number, alpha: number, beta: number, ply: 
 
   for (const m of order(chess, moves, e?.move, ply)) {
     chess.move(m);
-    const sc = -negamax(chess, depth - 1, -beta, -alpha, ply + 1);
+    const sc = -negamax(chess, depth - 1, -beta, -alpha, ply + 1, maxQuiescenceDepth);
     chess.undo();
     if (stopped) return 0;
     if (sc > best) { best = sc; bestSan = m; }
@@ -127,7 +128,7 @@ function negamax(chess: Chess, depth: number, alpha: number, beta: number, ply: 
 export interface SearchResult { san: string | null; score: number; depth: number; nodes: number }
 
 /** Aprofundamento iterativo com limite de tempo. score = centipawns do ponto de vista de QUEM JOGA. */
-export function searchBestMove(chess: Chess, maxDepth = 6, timeMs = 800): SearchResult {
+export function searchBestMove(chess: Chess, maxDepth = 6, timeMs = 800, maxQuiescenceDepth = 8): SearchResult {
   nodes = 0; stopped = false; deadline = Date.now() + timeMs; killers.length = 0;
   let rootMoves = chess.moves();
   if (rootMoves.length === 0) return { san: null, score: 0, depth: 0, nodes: 0 };
@@ -139,7 +140,7 @@ export function searchBestMove(chess: Chess, maxDepth = 6, timeMs = 800): Search
     let bestScore = -Infinity;
     for (const m of rootMoves) {
       chess.move(m);
-      const sc = -negamax(chess, depth - 1, -Infinity, -alpha, 1);
+      const sc = -negamax(chess, depth - 1, -Infinity, -alpha, 1, maxQuiescenceDepth);
       chess.undo();
       if (stopped) break;
       if (sc > bestScore) { bestScore = sc; bestMove = m; }
