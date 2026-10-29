@@ -111,7 +111,7 @@ export const TacticalTrainer: React.FC<TacticalTrainerProps> = ({
         } else {
           // Computer makes the intermediate response
           setMoveStep(nextStep);
-          setStatusMessage('Muito bem! Calcule o próximo lance.');
+          setStatusMessage(t('Muito bem! Calcule o próximo lance.'));
 
           setTimeout(() => {
             const botSan = currentPuzzle.moves[nextStep];
@@ -129,7 +129,7 @@ export const TacticalTrainer: React.FC<TacticalTrainerProps> = ({
         // Incorrect move
         soundEffects.playBlunder();
         setPuzzleStatus('failed');
-        setStatusMessage(`Lance ${moveResult.san} não é a melhor continuação tática. Tente novamente!`);
+        setStatusMessage(t(`Lance ${moveResult.san} não é a melhor continuação tática. Tente novamente!`));
 
         // Record failure in stats
         onUpdateStats({
@@ -153,7 +153,7 @@ export const TacticalTrainer: React.FC<TacticalTrainerProps> = ({
     });
 
     setPuzzleStatus('solved');
-    setStatusMessage('Sensacional! Tática resolvida com precisão.');
+    setStatusMessage(t('Sensacional! Tática resolvida com precisão.'));
 
     const newStreak = playerStats.streak + 1;
     const newBestStreak = Math.max(playerStats.bestStreak, newStreak);
@@ -195,7 +195,7 @@ export const TacticalTrainer: React.FC<TacticalTrainerProps> = ({
           color: 'green',
         },
       ]);
-      setStatusMessage(`Solução recomendada: ${currentPuzzle.moves.join(' → ')}`);
+      setStatusMessage(t('Solução recomendada:') + ' ' + currentPuzzle.moves.join(' → '));
     }
   };
 
@@ -204,9 +204,9 @@ export const TacticalTrainer: React.FC<TacticalTrainerProps> = ({
     { id: 'weakness', label: '🎯 Seus Pontos Fracos' },
     { id: 'Garfo Sofrido', label: 'Garfos' },
     { id: 'Cravada Sofrida', label: 'Cravadas' },
-    { id: 'Peça Pendurada', label: 'Peças Penduradas' },
-    { id: 'Rei Vulnerável', label: 'Segurança do Rei' },
-    { id: 'Oportunidade Tática Perdida', label: 'Ataques Forçados' },
+    { id: 'Peça Pendurada', label: t('Peças Penduradas') },
+    { id: 'Rei Vulnerável', label: t('Segurança do Rei') },
+    { id: 'Oportunidade Tática Perdida', label: t('Ataques Forçados') },
   ];
 
   return (
@@ -223,7 +223,7 @@ export const TacticalTrainer: React.FC<TacticalTrainerProps> = ({
           </div>
 
           <div className="flex items-center gap-3 font-mono text-slate-400">
-            <span>Exercício #{currentPuzzleIndex + 1} de {puzzles.length}</span>
+            <span>{t('Exercício #')}{currentPuzzleIndex + 1} {t('de')} {puzzles.length}</span>
             <span className="text-amber-400 font-semibold">{currentPuzzle.rating} Elo</span>
           </div>
         </div>
@@ -357,7 +357,7 @@ export const TacticalTrainer: React.FC<TacticalTrainerProps> = ({
                   onClick={handleShowSolution}
                   className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 transition-all"
                 >
-                  Ver Solução
+                  {t('Ver Solução')}
                 </button>
               </div>
             ) : (
