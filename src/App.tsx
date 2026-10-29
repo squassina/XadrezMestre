@@ -908,6 +908,7 @@ export default function App() {
         currentPlayerColor={playerColor}
         currentCoachInterruption={coachInterruption}
         currentShowEvalBar={showEvalBar}
+        gameInProgress={moves.length > 0 && !gameOver.isOver}
       />
 
       {/* Game Precision & Analysis Report Modal */}
