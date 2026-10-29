@@ -48,7 +48,6 @@ function generateFallbackExplanation(category: string, san: string, bestSan: str
     }
   }
   switch (category) {
-  switch (category) {
     case 'Peça Pendurada':
       return {
         explanation: `O lance ${san} deixou uma peça sem defesa ou moveu para uma casa controlada pelo adversário. O melhor lance recomendado era ${bestSan}.`,
