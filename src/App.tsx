@@ -479,6 +479,7 @@ export default function App() {
       setLastMove({ from, to });
       setArrows([]);
       setIsShowingBestMoveArrow(false);
+      setThinkingPlan(null);
 
       // Add increment to player's clock
       if (timeControl.incrementSeconds > 0) {
@@ -873,7 +874,7 @@ export default function App() {
                       Ver Relatório da Partida
                     </button>
                     <button
-                      onClick={() => handleStartNewGame({ botLevel, playerColor, coachInterruption, showEvalBar, timeControl })}
+                      onClick={() => handleStartNewGame({ botLevel, playerColor, coachInterruption, showEvalBar, timeControl, maxQuiescenceDepth })}
                       className="px-4 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold shadow-sm transition-colors"
                     >
                       Jogar Novamente
