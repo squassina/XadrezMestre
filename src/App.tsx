@@ -780,7 +780,7 @@ export default function App() {
                     {t('Como o computador está pensando')}
                   </h3>
                   {thinkingPlan?.status === 'thinking' && <span className="text-[10px] text-amber-300 animate-pulse">{t('Calculando variantes…')}</span>}
-                  {thinkingPlan?.status === 'ready' && <span className="text-[10px] text-slate-500">{thinkingPlan.engine}{thinkingPlan.ms ? ' · ' + thinkingPlan.ms + ' ms' : ''}</span>}
+                  {thinkingPlan?.status === 'ready' && <span className="text-[10px] text-slate-500">{t(thinkingPlan.engine)}{thinkingPlan.ms ? ' · ' + thinkingPlan.ms + ' ms' : ''}</span>}
                 </div>
                 {!thinkingPlan && <p className="text-[11px] text-slate-400">{t('Quando chegar a vez do computador, mostraremos as principais linhas calculadas e alternativas consideradas.')}</p>}
                 {thinkingPlan?.status === 'thinking' && <p className="text-[11px] text-slate-400">{t('O motor está comparando lances candidatos, respostas e posições futuras. As variantes aparecem quando a busca terminar.')}</p>}
