@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { AnalyzedMove, TimeControl, MoveQuality } from '../types/chess';
+import { useI18n } from '../i18n';
 import {
   Trophy, AlertTriangle, Sparkles, TrendingUp, ArrowRight,
   RotateCcw, CheckCircle2, XCircle, Clock, Zap, Target, X, ChevronRight
@@ -449,7 +450,7 @@ export const GameReportModal: React.FC<GameReportModalProps> = ({
           <div className="space-y-2">
             <h4 className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
               <Zap className="w-4 h-4 text-rose-400" />
-              <span>{t('Momentos Decisivos da Partida (Maiores Oscilações')}</span>
+              <span>{t('Momentos Decisivos da Partida (Maiores Oscilações)')}</span>
             </h4>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
