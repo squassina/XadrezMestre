@@ -1,0 +1,55 @@
+diff --git a/src/utils/remoteEngine.ts b/src/utils/remoteEngine.ts
+--- a/src/utils/remoteEngine.ts
++++ b/src/utils/remoteEngine.ts
+@@
+ import { Chess } from 'chess.js';
+ import { searchBestMove } from './search';
++import type { BotLevel } from '../types/chess';
++import { DIFFICULTY_PROFILES } from './difficulty';
+@@
+-export interface BotSettings { movetime: number; skill?: number; elo?: number; depth?: number }
++export interface BotSettings { movetime: number; skill?: number; elo?: number; depth?: number; fallbackTimeMs?: number; fallbackDepth?: number; variety?: number }
+@@
+ export const BOT_ENGINE: Record<'beginner' | 'intermediate' | 'advanced' | 'master', BotSettings> = {
+-  beginner:     { movetime: 100,  skill: 0, depth: 1 },
+-  intermediate: { movetime: 250,  elo: 1400 },
+-  advanced:     { movetime: 400,  elo: 1800 },
+-  master:       { movetime: 800,  elo: 2300 },
++  beginner:     { movetime: 90, skill: 0, fallbackTimeMs: 90, fallbackDepth: 2, variety: 0.65 },
++  intermediate: { movetime: 220, elo: 1350, fallbackTimeMs: 220, fallbackDepth: 3, variety: 0.20 },
++  advanced:     { movetime: 450, elo: 1750, fallbackTimeMs: 450, fallbackDepth: 5, variety: 0.04 },
++  master:       { movetime: 800, elo: 2200, fallbackTimeMs: 800, fallbackDepth: 7, variety: 0 },
+ };
+@@
+-    const r = await post<RemoteSearch>('/api/engine/search', { fen, ...s }, 8000, signal);
+-    return { from: r.bestMove.slice(0, 2), to: r.bestMove.slice(2, 4), promotion: r.bestMove[4], source: 'stockfish' };
++    const { depth: _depth, fallbackTimeMs: _fallbackTimeMs, fallbackDepth: _fallbackDepth, variety: _variety, ...engineSettings } = s;
++    const r = await post<RemoteSearch>('/api/engine/search', { fen, ...engineSettings }, Math.max(4_000, s.movetime + 3_000), signal);
++    const chess = new Chess(fen);
++    const move = chess.moves({ verbose: true }).find((m) => m.from === r.bestMove.slice(0, 2) && m.to === r.bestMove.slice(2, 4) && (m.promotion ?? '') === (r.bestMove[4] ?? ''));
++    if (!move) throw new Error('motor remoto retornou lance ilegal');
++    return { from: move.from, to: move.to, promotion: move.promotion, source: 'stockfish' };
+@@
+-    const chess = new Chess(fen);
+-    const r = searchBestMove(chess, 4, 600);
+-    const mv = chess.moves({ verbose: true }).find((m) => m.san === r.san);
+-    if (!mv) throw new Error('sem lances');
+-    return { from: mv.from, to: mv.to, promotion: mv.promotion, source: 'interno' };
++    const profile = DIFFICULTY_PROFILES[
++      (Object.entries(BOT_ENGINE).find(([, v]) => v === s)?.[0] as BotLevel | undefined) ?? 'intermediate'
++    ];
++    const chess = new Chess(fen);
++    const legalMoves = chess.moves({ verbose: true });
++    if (!legalMoves.length) throw new Error('sem lances');
++    const r = searchBestMove(chess, s.fallbackDepth ?? profile.fallbackDepth, s.fallbackTimeMs ?? profile.fallbackTimeMs);
++    const best = legalMoves.find((m) => m.san === r.san) ?? legalMoves[0];
++    const variety = s.variety ?? profile.variety;
++    if (variety > 0 && Math.random() < variety && legalMoves.length > 1) {
++      const alternatives = legalMoves.filter((m) => m.san !== best.san && !m.san.includes('#') && (!m.captured || variety < 0.5));
++      if (alternatives.length) {
++        const mv = alternatives[Math.floor(Math.random() * alternatives.length)];
++        return { from: mv.from, to: mv.to, promotion: mv.promotion, source: 'interno' };
++      }
++    }
++    return { from: best.from, to: best.to, promotion: best.promotion, source: 'interno' };
+*** End Patch

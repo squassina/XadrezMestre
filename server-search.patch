@@ -1,0 +1,12 @@
+diff --git a/server/engine.ts b/server/engine.ts
+--- a/server/engine.ts
++++ b/server/engine.ts
+@@
+-    const movetime = req.depth ? undefined : clamp(req.movetime ?? 500, 50, 5000);
+-    const depth = req.depth ? clamp(req.depth, 1, 30) : undefined;
++    // Explicit depth is an analysis constraint. Gameplay calls should send only
++    // movetime, so the selected time budget is never silently discarded.
++    const hasDepth = req.depth !== undefined && req.depth !== null && req.depth !== '';
++    const depth = hasDepth ? clamp(Number(req.depth), 1, 30) : undefined;
++    const movetime = depth === undefined ? clamp(Number(req.movetime ?? 500), 50, 5000) : undefined;
+*** End Patch

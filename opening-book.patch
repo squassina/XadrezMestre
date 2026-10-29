@@ -1,0 +1,17 @@
+diff --git a/src/App.tsx b/src/App.tsx
+--- a/src/App.tsx
++++ b/src/App.tsx
+@@
+-import { botMove, analyzeMoveRemote, BOT_ENGINE, warmUp, API_BASE_URL } from './utils/remoteEngine';
++import { botMove, analyzeMoveRemote, BOT_ENGINE, warmUp, API_BASE_URL } from './utils/remoteEngine';
++import { canUseOpeningBook } from './utils/difficulty';
+@@
+-        // 1. Check opening book first (main lines in first 10-15 moves)
++        // 1. Use opening theory only for the ply budget of the selected bot level.
+         let chosenMove: Move | null = null;
+         const bookEntry = getOpeningForPosition(fen);
+         const bookMoveObj = getBookMove(fen);
+-
+-        if (bookMoveObj) {
++        if (canUseOpeningBook(currentBot, currentGame.history().length) && bookMoveObj) {
+*** End Patch

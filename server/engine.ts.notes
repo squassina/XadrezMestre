@@ -1,0 +1,11 @@
+# Backend adjustment notes
+
+In `server/engine.ts`, the current search code chooses `go depth` whenever `depth` is truthy and silently ignores `movetime`.
+
+For game play, send only `movetime` from `BOT_ENGINE`; do not pass `depth` at the same time. Keep `depth` for explicit analysis requests, where the caller asks for a deterministic search depth.
+
+For safe engine option handling, reset all strength-related options for every request (already substantially present):
+- when `elo` is supplied: `UCI_LimitStrength=true`, `UCI_Elo=<clamped elo>`;
+- otherwise: `UCI_LimitStrength=false`, `Skill Level=<clamped skill>`.
+
+Important: Stockfish UCI_Elo support depends on the installed build. Validate the chosen values in the deployment image; don't infer Elo equivalence from the UI label alone.
