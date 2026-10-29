@@ -742,7 +742,7 @@ export default function App() {
                   <button
                     onClick={() => { setNewGameModalMode('bot'); setNewGameModalOpen(true); }}
                     className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700 transition-colors"
-                    title="Trocar adversário"
+                    title={t('Trocar adversário')}
                   >
                     Trocar Bot
                   </button>
@@ -839,7 +839,7 @@ export default function App() {
                     <button
                       onClick={() => setIsReportModalOpen(true)}
                       className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-700/60 text-indigo-300 text-xs font-medium shadow-xs transition-colors"
-                      title="Gráfico de Precisão e Relatório da Partida"
+                      title={t('Gráfico de Precisão e Relatório da Partida')}
                     >
                       <BarChart2 className="w-3 h-3 text-indigo-400" />
                       <span>{t('Relatório')}</span>
@@ -865,7 +865,7 @@ export default function App() {
                   <Trophy className="w-7 h-7 text-amber-400 mx-auto" />
                   <h3 className="text-base font-bold text-slate-100">{gameOver.message ? t(gameOver.message) : ''}</h3>
                   <p className="text-xs text-slate-400">
-                    A partida foi finalizada! Veja o gráfico de precisão lance a lance e momentos críticos.
+                    {t('A partida foi finalizada! Veja o gráfico de precisão lance a lance e momentos críticos.')}
                   </p>
                   <div className="flex flex-wrap items-center justify-center gap-2 mt-1">
                     <button
@@ -873,7 +873,7 @@ export default function App() {
                       className="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md flex items-center gap-1.5 transition-colors"
                     >
                       <BarChart2 className="w-3.5 h-3.5" />
-                      Ver Relatório da Partida
+                      {t('Ver Relatório da Partida')}
                     </button>
                     <button
                       onClick={() => handleStartNewGame({ botLevel, playerColor, coachInterruption, showEvalBar, timeControl, maxQuiescenceDepth })}
@@ -885,7 +885,7 @@ export default function App() {
                       onClick={() => setActiveTab('tactics')}
                       className="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 transition-colors"
                     >
-                      Treinar Táticas
+                      {t('Treinar Táticas')}
                     </button>
                   </div>
                 </div>
@@ -940,7 +940,7 @@ export default function App() {
               setActiveTab('tactics');
             }}
             onResetStats={() => {
-              if (confirm('Deseja realmente zerar o histórico de erros e estatísticas?')) {
+              if (confirm(t('Deseja realmente zerar o histórico de erros e estatísticas?'))) {
                 setPlayerStats(DEFAULT_STATS);
               }
             }}
