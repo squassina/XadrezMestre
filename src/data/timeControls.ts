@@ -12,7 +12,7 @@ export const TIME_CONTROLS: TimeControl[] = [
   },
   {
     id: 'bullet-2-1',
-    name: '2 | 1',
+    name: '2+1',
     type: 'bullet',
     baseMinutes: 2,
     incrementSeconds: 1,
@@ -30,7 +30,7 @@ export const TIME_CONTROLS: TimeControl[] = [
   },
   {
     id: 'blitz-3-2',
-    name: '3 | 2',
+    name: '3+2',
     type: 'blitz',
     baseMinutes: 3,
     incrementSeconds: 2,
@@ -46,7 +46,7 @@ export const TIME_CONTROLS: TimeControl[] = [
   },
   {
     id: 'blitz-5-3',
-    name: '5 | 3',
+    name: '5+3',
     type: 'blitz',
     baseMinutes: 5,
     incrementSeconds: 3,
@@ -64,7 +64,7 @@ export const TIME_CONTROLS: TimeControl[] = [
   },
   {
     id: 'rapid-15-10',
-    name: '15 | 10',
+    name: '15+10',
     type: 'rapid',
     baseMinutes: 15,
     incrementSeconds: 10,
