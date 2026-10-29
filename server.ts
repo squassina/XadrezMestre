@@ -152,7 +152,7 @@ Return immediate, constructive feedback as strict JSON:
     return res.json({ ...fallback, isAiGenerated: false });
   } catch (error) {
     console.error('Error generating coach feedback:', error);
-    const { san, bestSan, blunderCategory } = req.body;
+    const { san, bestSan, blunderCategory, language = 'pt-BR' } = req.body;
     const fallback = generateFallbackExplanation(blunderCategory || 'Imprecisão', san || '', bestSan || '', undefined, language);
     return res.json({ ...fallback, isAiGenerated: false });
   }

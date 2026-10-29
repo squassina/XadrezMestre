@@ -73,7 +73,6 @@ const translations: Record<string, string> = {
   'Zerar Histórico de Erros': 'Reset Mistake History',
   'Gafes Recentes Analisadas em Partida': 'Recent In-Game Blunders Analyzed',
   'Você jogou:': 'You played:',
-  'Melhor:': 'Best:',
   'Manual do Enxadrista: Dicas & Conceitos Mestres': 'Chess Player Manual: Tips & Master Concepts',
   'Guia prático para eliminar os erros mais frequentes e acelerar seu progresso no xadrez.': 'A practical guide to eliminate common mistakes and accelerate your chess progress.',
   'Praticar Este Tema': 'Practice This Topic',
