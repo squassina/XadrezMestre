@@ -23,6 +23,7 @@ interface NewGameModalProps {
   currentPlayerColor?: 'w' | 'b';
   currentCoachInterruption?: boolean;
   currentShowEvalBar?: boolean;
+  gameInProgress?: boolean;
 }
 
 export const NewGameModal: React.FC<NewGameModalProps> = ({
@@ -36,6 +37,7 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
   currentPlayerColor = 'w',
   currentCoachInterruption = true,
   currentShowEvalBar = true,
+  gameInProgress = false,
 }) => {
   const dialogRef = useRef<HTMLDivElement>(null);
   const [selectedBot, setSelectedBot] = useState<BotLevel>(currentBotLevel);
@@ -92,6 +94,9 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
   if (!isOpen) return null;
 
   const handleStart = () => {
+    if (gameInProgress && !window.confirm('Iniciar outra partida descartará a partida atual e seu histórico. Deseja continuar?')) {
+      return;
+    }
     const finalColor: 'w' | 'b' = mode === 'bot'
       ? currentPlayerColor
       : selectedColor === 'random' ? (Math.random() < 0.5 ? 'w' : 'b') : selectedColor;
