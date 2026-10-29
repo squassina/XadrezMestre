@@ -46,6 +46,14 @@ O jogo oferece os seguintes controles:
 
 O incremento é acrescentado ao relógio do jogador após cada lance, de acordo com o controle escolhido.
 
+### Ajuste da profundidade tática
+
+Na configuração da partida, o controle **Profundidade tática (maxQuiescenceDepth)** permite ajustar o desafio de 1 a 12. Valores menores limitam a busca tática adicional do mecanismo interno de reserva; valores maiores permitem examinar sequências de capturas e promoções mais longas, com possível aumento do tempo de cálculo. Quando Stockfish remoto está disponível, o ajuste também desloca a força solicitada ao motor (e, portanto, pode tornar o adversário mais fácil ou mais difícil). O Stockfish mantém sua própria busca quiescente interna, que não é diretamente configurável por esse parâmetro. A preferência fica salva localmente no navegador.
+
+### Variantes calculadas pelo computador
+
+Durante o turno do computador, o jogo exibe um estado de cálculo e, ao concluir a busca, mostra até três linhas candidatas em notação algébrica (SAN), incluindo a linha principal e alternativas. As variantes vêm do recurso MultiPV do Stockfish quando o motor remoto está disponível; o mecanismo interno de reserva pode fornecer uma linha mais curta. Elas representam resultados do cálculo da posição, não uma transcrição de pensamento humano, e podem mudar conforme tempo, profundidade e posição.
+
 ### Escolha de cor e troca de adversário
 
 Você pode jogar com as brancas ou com as pretas. Quando escolhe as pretas, o computador faz o primeiro lance. A opção **Trocar Bot** permite alterar o nível do adversário sem precisar alterar as demais configurações da partida.
