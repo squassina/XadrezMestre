@@ -74,3 +74,6 @@ export async function analyzeMoveRemote(
     return null;
   }
 }
+
+// Export the base URL variable
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
