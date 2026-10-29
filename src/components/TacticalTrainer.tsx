@@ -200,10 +200,10 @@ export const TacticalTrainer: React.FC<TacticalTrainerProps> = ({
   };
 
   const categories = [
-    { id: 'all', label: 'Todos os Temas' },
-    { id: 'weakness', label: '🎯 Seus Pontos Fracos' },
-    { id: 'Garfo Sofrido', label: 'Garfos' },
-    { id: 'Cravada Sofrida', label: 'Cravadas' },
+    { id: 'all', label: t('Todos os Temas') },
+    { id: 'weakness', label: t('🎯 Seus Pontos Fracos') },
+    { id: 'Garfo Sofrido', label: t('Garfos') },
+    { id: 'Cravada Sofrida', label: t('Cravadas') },
     { id: 'Peça Pendurada', label: t('Peças Penduradas') },
     { id: 'Rei Vulnerável', label: t('Segurança do Rei') },
     { id: 'Oportunidade Tática Perdida', label: t('Ataques Forçados') },
