@@ -143,7 +143,7 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
             </span>
           </div>
 
-          <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
+          <div className="grid grid-cols-3 gap-1.5">
             {TIME_CONTROLS.map((tc) => {
               const isSelected = selectedTimeControl.id === tc.id;
               let icon = <Timer className="w-3 h-3 text-emerald-400" />;
