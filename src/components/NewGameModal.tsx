@@ -19,6 +19,10 @@ interface NewGameModalProps {
   currentBotLevel: BotLevel;
   currentTimeControl: TimeControl;
   currentPieceSet?: PieceSet;
+  mode?: 'full' | 'bot';
+  currentPlayerColor?: 'w' | 'b';
+  currentCoachInterruption?: boolean;
+  currentShowEvalBar?: boolean;
 }
 
 export const NewGameModal: React.FC<NewGameModalProps> = ({
@@ -28,24 +32,31 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
   currentBotLevel,
   currentTimeControl,
   currentPieceSet = 'cburnett',
+  mode = 'full',
+  currentPlayerColor = 'w',
+  currentCoachInterruption = true,
+  currentShowEvalBar = true,
 }) => {
   const [selectedBot, setSelectedBot] = useState<BotLevel>(currentBotLevel);
-  const [selectedColor, setSelectedColor] = useState<'w' | 'b' | 'random'>('w');
+  const [selectedColor, setSelectedColor] = useState<'w' | 'b' | 'random'>(currentPlayerColor);
   const [selectedTimeControl, setSelectedTimeControl] = useState<TimeControl>(
     currentTimeControl || DEFAULT_TIME_CONTROL
   );
   const [selectedPieceSet, setSelectedPieceSet] = useState<PieceSet>(currentPieceSet);
-  const [coachInterruption, setCoachInterruption] = useState(true);
-  const [showEvalBar, setShowEvalBar] = useState(true);
+  const [coachInterruption, setCoachInterruption] = useState(currentCoachInterruption);
+  const [showEvalBar, setShowEvalBar] = useState(currentShowEvalBar);
 
   // Sincroniza o estado interno com as props ao abrir o modal
   useEffect(() => {
     if (isOpen) {
       setSelectedBot(currentBotLevel);
+      setSelectedColor(currentPlayerColor);
+      setCoachInterruption(currentCoachInterruption);
+      setShowEvalBar(currentShowEvalBar);
       setSelectedTimeControl(currentTimeControl || DEFAULT_TIME_CONTROL);
       setSelectedPieceSet(currentPieceSet || 'cburnett');
     }
-  }, [isOpen, currentBotLevel, currentTimeControl, currentPieceSet]);
+  }, [isOpen, currentBotLevel, currentTimeControl, currentPieceSet, currentPlayerColor, currentCoachInterruption, currentShowEvalBar]);
 
   // Manipulador da tecla ESC
   useEffect(() => {
@@ -74,15 +85,16 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
   if (!isOpen) return null;
 
   const handleStart = () => {
-    const finalColor: 'w' | 'b' =
-      selectedColor === 'random' ? (Math.random() < 0.5 ? 'w' : 'b') : selectedColor;
+    const finalColor: 'w' | 'b' = mode === 'bot'
+      ? currentPlayerColor
+      : selectedColor === 'random' ? (Math.random() < 0.5 ? 'w' : 'b') : selectedColor;
     onStartGame({
       botLevel: selectedBot,
       playerColor: finalColor,
-      coachInterruption,
-      showEvalBar,
-      timeControl: selectedTimeControl,
-      pieceSet: selectedPieceSet,
+      coachInterruption: mode === 'bot' ? currentCoachInterruption : coachInterruption,
+      showEvalBar: mode === 'bot' ? currentShowEvalBar : showEvalBar,
+      timeControl: mode === 'bot' ? currentTimeControl : selectedTimeControl,
+      pieceSet: mode === 'bot' ? currentPieceSet : selectedPieceSet,
     });
     onClose();
   };
@@ -95,6 +107,7 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
       className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto cursor-pointer"
       role="dialog"
       aria-modal="true"
+      aria-labelledby="new-game-modal-title"
     >
       <div
         onClick={(e) => e.stopPropagation()}
@@ -104,7 +117,7 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
         <div className="flex items-center justify-between border-b border-slate-800 pb-3">
           <div className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-amber-400" />
-            <h2 className="text-base font-bold">Configurar Partida com Treinador</h2>
+            <h2 id="new-game-modal-title" className="text-base font-bold">{mode === 'bot' ? 'Trocar Bot' : 'Configurar Partida com Treinador'}</h2>
           </div>
           <button
             type="button"
@@ -116,6 +129,8 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
           </button>
         </div>
 
+        {mode === 'full' && (
+          <>
         {/* Time Control Selection */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
@@ -158,6 +173,9 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
           </div>
         </div>
 
+          </>
+        )}
+
         {/* Bot Level Selection */}
         <div className="space-y-2 pt-1 border-t border-slate-800">
           <label className="text-xs font-semibold text-slate-300">Escolha seu Oponente de Treino:</label>
@@ -188,6 +206,8 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
           </div>
         </div>
 
+        {mode === 'full' && (
+          <>
         {/* Color Choice */}
         <div className="space-y-2 pt-1 border-t border-slate-800">
           <label className="text-xs font-semibold text-slate-300">Suas Peças:</label>
@@ -232,6 +252,11 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
           </div>
         </div>
 
+          </>
+        )}
+
+        {mode === 'full' && (
+          <>
         {/* Piece Set Selection */}
         <div className="space-y-2 pt-1 border-t border-slate-800">
           <div className="flex items-center justify-between">
@@ -240,14 +265,20 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
               <span>Estilo Visual das Peças:</span>
             </label>
             <span className="text-[11px] font-mono text-amber-400 font-semibold">
-              {selectedPieceSet === 'alpha' ? 'Alpha' : 'cburnett'}
+              {{ staunty: 'Staunty', cburnett: 'Cburnett', merida: 'Merida', alpha: 'Alpha' }[selectedPieceSet]}
             </span>
           </div>
 
           <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => setSelectedPieceSet('cburnett')}
+            <button type="button" onClick={() => setSelectedPieceSet('staunty')} className={`p-2.5 rounded-xl border text-left flex items-center gap-3 ${selectedPieceSet === 'staunty' ? 'bg-amber-500/15 border-amber-500/60 ring-1 ring-amber-500/40 text-amber-200' : 'bg-slate-950/60 border-slate-800 text-slate-300'}`}>
+              <div className="w-9 h-9 shrink-0 flex items-center justify-center p-0.5 bg-slate-900 rounded-lg border border-slate-800"><ChessPiece type="n" color="w" set="staunty" /></div>
+              <div className="flex flex-col"><span className="text-xs font-bold text-slate-100">Staunty</span><span className="text-[10px] text-slate-400">Clássico</span></div>
+            </button>
+            <button type="button" onClick={() => setSelectedPieceSet('merida')} className={`p-2.5 rounded-xl border text-left flex items-center gap-3 ${selectedPieceSet === 'merida' ? 'bg-amber-500/15 border-amber-500/60 ring-1 ring-amber-500/40 text-amber-200' : 'bg-slate-950/60 border-slate-800 text-slate-300'}`}>
+              <div className="w-9 h-9 shrink-0 flex items-center justify-center p-0.5 bg-slate-900 rounded-lg border border-slate-800"><ChessPiece type="n" color="w" set="merida" /></div>
+              <div className="flex flex-col"><span className="text-xs font-bold text-slate-100">Merida</span><span className="text-[10px] text-slate-400">Tradicional</span></div>
+            </button>
+            <button type="button" onClick={() => setSelectedPieceSet('cburnett')}
               className={`p-2.5 rounded-xl border text-left flex items-center gap-3 transition-all ${
                 selectedPieceSet === 'cburnett'
                   ? 'bg-amber-500/15 border-amber-500/60 ring-1 ring-amber-500/40 text-amber-200'
@@ -283,6 +314,11 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
           </div>
         </div>
 
+          </>
+        )}
+
+        {mode === 'full' && (
+          <>
         {/* Coach Settings */}
         <div className="space-y-2 pt-1 border-t border-slate-800">
           <label className="text-xs font-semibold text-slate-300">Assistência do Treinador:</label>
@@ -308,6 +344,9 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
             </label>
           </div>
         </div>
+
+          </>
+        )}
 
         {/* Footer CTAs */}
         <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
