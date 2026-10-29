@@ -129,7 +129,7 @@ export const TacticalTrainer: React.FC<TacticalTrainerProps> = ({
         // Incorrect move
         soundEffects.playBlunder();
         setPuzzleStatus('failed');
-        setStatusMessage(t(`Lance ${moveResult.san} não é a melhor continuação tática. Tente novamente!`));
+        setStatusMessage(t('Lance ') + moveResult.san + t(' não é a melhor continuação tática. Tente novamente!'));
 
         // Record failure in stats
         onUpdateStats({
@@ -180,7 +180,7 @@ export const TacticalTrainer: React.FC<TacticalTrainerProps> = ({
   const handleShowHint = () => {
     setHintUsed(true);
     const expectedSan = currentPuzzle.moves[moveStep];
-    setStatusMessage(`Dica: ${currentPuzzle.hint} (Procure o lance ${expectedSan.charAt(0)})`);
+    setStatusMessage(t('Dica:') + ' ' + t(currentPuzzle.hint) + ' (' + t('Procure o lance') + ' ' + expectedSan.charAt(0) + ')');
   };
 
   const handleShowSolution = () => {
@@ -218,7 +218,7 @@ export const TacticalTrainer: React.FC<TacticalTrainerProps> = ({
           <div className="flex items-center gap-2">
             <span className={`w-3 h-3 rounded-full border ${currentPuzzle.playerColor === 'w' ? 'bg-white border-slate-400' : 'bg-slate-950 border-slate-600'}`} />
             <span className="font-semibold text-slate-200">
-              {currentPuzzle.playerColor === 'w' ? 'Brancas jogam e vencem' : 'Pretas jogam e vencem'}
+              {t(currentPuzzle.playerColor === 'w' ? 'Brancas jogam e vencem' : 'Pretas jogam e vencem')}
             </span>
           </div>
 
@@ -294,11 +294,11 @@ export const TacticalTrainer: React.FC<TacticalTrainerProps> = ({
         <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl flex flex-col gap-3">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <h3 className="text-base font-bold text-slate-100">{currentPuzzle.title}</h3>
+              <h3 className="text-base font-bold text-slate-100">{t(currentPuzzle.title)}</h3>
               <div className="flex items-center gap-2 mt-1 text-xs text-slate-400">
-                <span className="text-amber-300 font-medium">{currentPuzzle.category}</span>
+                <span className="text-amber-300 font-medium">{t(currentPuzzle.category)}</span>
                 <span aria-hidden="true">·</span>
-                <span>{currentPuzzle.difficulty}</span>
+                <span>{t(currentPuzzle.difficulty)}</span>
               </div>
             </div>
 
@@ -330,7 +330,7 @@ export const TacticalTrainer: React.FC<TacticalTrainerProps> = ({
           {puzzleStatus === 'solved' && (
             <div className="p-3 rounded-lg bg-slate-950/70 border border-slate-800 text-xs text-slate-300 leading-relaxed">
               <strong className="text-amber-300 block mb-1">{t('Lição do Treinador:')}</strong>
-              {currentPuzzle.lesson}
+              {t(currentPuzzle.lesson)}
             </div>
           )}
 
