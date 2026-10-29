@@ -99,18 +99,18 @@ app.post('/api/coach/explain', async (req, res) => {
     }
 
     const prompt = `Você é um Grande Mestre Internacional de Xadrez e treinador pedagógico paciente, entusiasmado e didático em língua portuguesa.
-O aluno jogou o lance "${san}", mas o melhor lance do motor era "${bestSan}".
-Classificação do erro: "${blunderCategory || 'Imprecisão/Gafe'}".
-Diferença de avaliação: ${evalDiff ? `${evalDiff} centipawns` : 'perda significativa'}.
-Posição atual FEN: ${fen || 'desconhecida'}.
-Histórico de erros recentes do aluno: ${JSON.stringify(userMistakeHistory || [])}.
+The student played "${san}", but the engine’s best move was "${bestSan}".
+Mistake classification: "${blunderCategory || 'Inaccuracy/Blunder'}".
+Evaluation difference: ${evalDiff ? `${evalDiff} centipawns` : 'significant loss'}.
+Current position FEN: ${fen || 'unknown'}.
+Recent student mistakes: ${JSON.stringify(userMistakeHistory || [])}.
 
-Forneça um feedback imediato e altamente construtivo em formato JSON rigoroso:
+Return immediate, constructive feedback as strict JSON:
 {
-  "explanation": "Explicação clara e amigável em 2-3 frases do motivo tático ou estratégico pelo qual ${san} foi problemático e por que ${bestSan} era superior.",
+  "explanation": "A clear, friendly 2–3 sentence explanation of why ${san} was problematic and why ${bestSan} was better.",
   "tacticalConcept": "Nome conciso do conceito de xadrez em português (Ex: 'Peça Pendurada', 'Cravada Relativa', 'Controle Central', 'Rei Desprotegido')",
-  "proTip": "Uma dica prática memorável para o aluno aplicar já na próxima partida",
-  "keyQuestionsToAsk": ["Pergunta 1 de checklist mental antes do lance", "Pergunta 2"]
+  "proTip": "A memorable practical tip the student can apply in the next game",
+  "keyQuestionsToAsk": ["Mental checklist question 1", "Question 2"]
 }`;
 
     const timeoutPromise = new Promise<never>((_, reject) =>
@@ -154,15 +154,16 @@ app.post('/api/coach/diagnostics', async (req, res) => {
     const { stats, errorCounts, totalGames } = req.body;
 
     if (!ai) {
-      return res.json({
+      return res.json(language === 'en' ? {
+        summary: `You have played ${totalGames || 0} analyzed games. Focus on reducing undefended pieces and maintaining tactical awareness.`,
+        strengths: ['Enthusiasm for learning', 'Initiative in seeking active positions'],
+        weaknesses: Object.keys(errorCounts || {}).slice(0, 3),
+        recommendations: ['Solve five pin and fork puzzles daily.', 'Before each move, check for checks, captures, and threats.', 'Consider castling earlier to avoid attacks along the center files.']
+      } : {
         summary: `Você disputou ${totalGames || 0} partidas analisadas. Seu foco principal deve ser reduzir peças desprotegidas e manter a vigilância tática.`,
         strengths: ['Entusiasmo para aprender', 'Iniciativa em buscar posições ativas'],
         weaknesses: Object.keys(errorCounts || {}).slice(0, 3),
-        recommendations: [
-          'Resolva 5 exercícios de cravadas e garfos diariamente.',
-          'Antes de cada lance, faça o checklist: Xeques, Capturas, Ameaças.',
-          'Considere o roque mais cedo para evitar ataques na coluna central.'
-        ]
+        recommendations: ['Resolva 5 exercícios de cravadas e garfos diariamente.', 'Antes de cada lance, faça o checklist: Xeques, Capturas, Ameaças.', 'Considere o roque mais cedo para evitar ataques na coluna central.']
       });
     }
 
@@ -197,11 +198,10 @@ Retorne um diagnóstico didático em JSON em português:
     return res.json(parsed);
   } catch (err) {
     console.error('Error in diagnostics:', err);
-    return res.json({
-      summary: 'Continue praticando exercícios de tática para solidificar o reconhecimento de padrões.',
-      strengths: ['Dedicação aos treinos'],
-      weaknesses: ['Vigilância em peças desprotegidas'],
-      recommendations: ['Exercícios diários de cálculo de lances forçados']
+    return res.json(language === 'en' ? {
+      summary: 'Keep practicing tactical puzzles to strengthen pattern recognition.', strengths: ['Dedication to training'], weaknesses: ['Awareness of undefended pieces'], recommendations: ['Daily exercises calculating forcing moves']
+    } : {
+      summary: 'Continue praticando exercícios de tática para solidificar o reconhecimento de padrões.', strengths: ['Dedicação aos treinos'], weaknesses: ['Vigilância em peças desprotegidas'], recommendations: ['Exercícios diários de cálculo de lances forçados']
     });
   }
 });
