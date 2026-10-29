@@ -1,3 +1,5 @@
+import { BotLevel } from '../types/chess';
+
 export interface BookMove {
   san: string;
   weight: number; // probability weight (higher = more common main-line)
@@ -356,4 +358,17 @@ export function getBookMove(fen: string): BookMove | null {
   }
 
   return entry.moves[0];
+}
+
+
+/** Maximum number of half-moves for which each bot level may use the opening book. */
+const OPENING_BOOK_MAX_PLIES: Record<BotLevel, number> = {
+  beginner: 4,
+  intermediate: 12,
+  advanced: 20,
+  master: 30,
+};
+
+export function canUseOpeningBook(botLevel: BotLevel, halfMovesPlayed: number): boolean {
+  return halfMovesPlayed < OPENING_BOOK_MAX_PLIES[botLevel];
 }
