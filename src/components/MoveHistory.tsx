@@ -123,7 +123,7 @@ export const MoveHistory: React.FC<MoveHistoryProps> = ({
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-2 space-y-0.5 text-xs font-mono">
         {movePairs.length === 0 ? (
           <div className="h-full flex items-center justify-center text-slate-500 font-sans text-xs italic">
-            Nenhum lance jogado ainda.
+            {t('Nenhum lance jogado ainda.')}
           </div>
         ) : (
           movePairs.map((pair) => (
