@@ -98,7 +98,7 @@ app.post('/api/coach/explain', async (req, res) => {
       return res.json({ ...fallback, isAiGenerated: false });
     }
 
-    const prompt = `Você é um Grande Mestre Internacional de Xadrez e treinador pedagógico paciente, entusiasmado e didático em língua portuguesa.
+    const prompt = `You are an International Chess Grandmaster and a patient, enthusiastic chess coach. Respond in ${language === 'en' ? 'English' : 'Brazilian Portuguese'}.
 The student played "${san}", but the engine’s best move was "${bestSan}".
 Mistake classification: "${blunderCategory || 'Inaccuracy/Blunder'}".
 Evaluation difference: ${evalDiff ? `${evalDiff} centipawns` : 'significant loss'}.
@@ -167,17 +167,17 @@ app.post('/api/coach/diagnostics', async (req, res) => {
       });
     }
 
-    const prompt = `Analise o perfil de erros deste jogador de xadrez:
+    const prompt = `Analyze this chess player's mistake profile. Respond in ${language === 'en' ? 'English' : 'Brazilian Portuguese'}:
 Partidas jogadas: ${totalGames}
 Estatísticas de erros: ${JSON.stringify(errorCounts)}
 Estatísticas gerais: ${JSON.stringify(stats)}
 
-Retorne um diagnóstico didático em JSON em português:
+Return an educational diagnosis as strict JSON:
 {
-  "summary": "Resumo de 2 frases do estilo e principal gargalo do aluno",
-  "strengths": ["Ponto forte 1", "Ponto forte 2"],
-  "weaknesses": ["Ponto fraco 1", "Ponto fraco 2"],
-  "recommendations": ["Recomendação prática 1", "Recomendação prática 2", "Recomendação prática 3"]
+  "summary": "Two-sentence summary of the player’s style and main improvement area",
+  "strengths": ["Strength 1", "Strength 2"],
+  "weaknesses": ["Weakness 1", "Weakness 2"],
+  "recommendations": ["Practical recommendation 1", "Recommendation 2", "Recommendation 3"]
 }`;
 
     const timeoutPromise = new Promise<never>((_, reject) =>
