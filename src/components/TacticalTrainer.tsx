@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Chess, Square } from 'chess.js';
-import { TacticalPuzzle, PlayerStats, BlunderCategory, BoardArrow } from '../types/chess';
+import { TacticalPuzzle, PlayerStats, BlunderCategory, BoardArrow, PieceSet, BoardTheme } from '../types/chess';
 import { INITIAL_PUZZLES, getPersonalizedPuzzles } from '../data/puzzles';
 import { ChessBoard } from './ChessBoard';
 import { soundEffects } from '../utils/sound';
@@ -13,13 +13,15 @@ import {
 interface TacticalTrainerProps {
   playerStats: PlayerStats;
   onUpdateStats: (newStats: Partial<PlayerStats>) => void;
-  boardTheme: 'tournament' | 'wood' | 'emerald';
+  boardTheme: BoardTheme;
+  pieceSet?: PieceSet;
 }
 
 export const TacticalTrainer: React.FC<TacticalTrainerProps> = ({
   playerStats,
   onUpdateStats,
   boardTheme,
+  pieceSet = 'cburnett',
 }) => {
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [puzzles, setPuzzles] = useState<TacticalPuzzle[]>([]);
@@ -233,6 +235,7 @@ export const TacticalTrainer: React.FC<TacticalTrainerProps> = ({
           arrows={arrows}
           lastMove={lastMove}
           boardTheme={boardTheme}
+          pieceSet={pieceSet}
         />
       </div>
 

@@ -113,3 +113,7 @@ export interface TimeControl {
   description: string;
 }
 
+export type PieceSet = 'cburnett' | 'staunty' | 'merida' | 'alpha';
+export type BoardTheme = 'emerald' | 'wood' | 'tournament' | 'marble';
+
+

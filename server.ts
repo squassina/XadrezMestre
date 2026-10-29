@@ -2,13 +2,30 @@ import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import dotenv from 'dotenv';
 import { GoogleGenAI } from '@google/genai';
+import { engineRouter } from './server/engineRoutes';
+import { enginePool } from './server/engine';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
-app.use(express.json());
+app.use(express.json({ limit: '50kb' }));
+
+// CORS headers for API calls
+app.use((req, res, next) => {
+  const origin = req.headers.origin || '*';
+  res.header('Access-Control-Allow-Origin', origin);
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(204);
+  }
+  next();
+});
+
+// Mount Stockfish Engine Routes
+app.use('/api/engine', engineRouter);
 
 // Initialize Gemini SDK if API key is present
 const apiKey = process.env.GEMINI_API_KEY;
@@ -40,7 +57,7 @@ function generateFallbackExplanation(category: string, san: string, bestSan: str
       };
     case 'Rei Vulnerável':
       return {
-        explanation: `O lance ${san} enfraqueceu o escudo de peões do seu rei ou atrasou o roque crítico. O lance ideal era ${bestSan}.`,
+        explanation: `O lance ${san} enfraqueceu o escudo de peões do seu rei ou permitiu xeques perigosos. O lance ideal era ${bestSan}.`,
         tacticalConcept: 'Segurança do Rei',
         proTip: 'No meio-jogo com muitas peças no tabuleiro, a prioridade máxima é colocar o rei em segurança com o roque.',
         keyQuestionsToAsk: ['Meu rei está protegido contra xeques e aberturas de coluna?']
@@ -97,7 +114,7 @@ Forneça um feedback imediato e altamente construtivo em formato JSON rigoroso:
     );
 
     const generatePromise = ai.models.generateContent({
-      model: 'gemini-3.8-flash',
+      model: 'gemini-2.5-flash',
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
@@ -163,7 +180,7 @@ Retorne um diagnóstico didático em JSON em português:
     );
 
     const generatePromise = ai.models.generateContent({
-      model: 'gemini-3.8-flash',
+      model: 'gemini-2.5-flash',
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
@@ -204,12 +221,24 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
+  const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`Chess Coach Server running on port ${PORT}`);
   });
+
+  const gracefulShutdown = () => {
+    console.log('Shutting down server and engine pool...');
+    enginePool.destroy();
+    server.close(() => {
+      process.exit(0);
+    });
+  };
+
+  process.on('SIGTERM', gracefulShutdown);
+  process.on('SIGINT', gracefulShutdown);
 }
 
 startServer().catch((err) => {
   console.error('Failed to start server:', err);
   process.exit(1);
 });
+

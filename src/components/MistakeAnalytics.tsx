@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { PlayerStats, BlunderCategory } from '../types/chess';
+import { API_BASE_URL } from '../utils/remoteEngine';
 import { 
   AlertTriangle, ShieldAlert, Zap, Target, Award, Sparkles, 
   RotateCcw, CheckCircle2, TrendingUp, HelpCircle, Activity 
@@ -48,7 +49,7 @@ export const MistakeAnalytics: React.FC<MistakeAnalyticsProps> = ({
   const handleRequestAiDiagnostics = async () => {
     setLoadingAi(true);
     try {
-      const res = await fetch('/api/coach/diagnostics', {
+      const res = await fetch(`${API_BASE_URL}/api/coach/diagnostics`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

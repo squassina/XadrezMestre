@@ -1,5 +1,6 @@
 import React from 'react';
 import { Crown } from 'lucide-react';
+import { PieceSet, BoardTheme } from '../types/chess';
 
 export type NavTab = 'game' | 'tactics' | 'analytics' | 'principles';
 
@@ -7,8 +8,10 @@ interface TopNavProps {
   currentTab: NavTab;
   onSelectTab: (tab: NavTab) => void;
   onNewGame: () => void;
-  boardTheme: 'tournament' | 'wood' | 'emerald';
-  onSelectTheme: (theme: 'tournament' | 'wood' | 'emerald') => void;
+  boardTheme: BoardTheme;
+  onSelectTheme: (theme: BoardTheme) => void;
+  pieceSet: PieceSet;
+  onSelectPieceSet: (set: PieceSet) => void;
 }
 
 export const TopNav: React.FC<TopNavProps> = ({
@@ -17,10 +20,12 @@ export const TopNav: React.FC<TopNavProps> = ({
   onNewGame,
   boardTheme,
   onSelectTheme,
+  pieceSet,
+  onSelectPieceSet,
 }) => {
   return (
     <header className="sticky top-0 z-40 w-full bg-slate-950/90 backdrop-blur-md border-b border-slate-800/80">
-      <div className="max-w-7xl mx-auto flex items-center justify-between gap-8 px-4 sm:px-6 py-3">
+      <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 sm:gap-8 px-4 sm:px-6 py-3">
         {/* Zone 1: Brand Wordmark */}
         <div
           onClick={() => onSelectTab('game')}
@@ -70,22 +75,39 @@ export const TopNav: React.FC<TopNavProps> = ({
           </button>
         </nav>
 
-        {/* Zone 3: 1 Primary Action + Theme Selector */}
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        {/* Zone 3: Selectors (Pieces & Board) + Action */}
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Piece Set Selector */}
+          <select
+            value={pieceSet}
+            onChange={(e) => onSelectPieceSet(e.target.value as PieceSet)}
+            aria-label="Conjunto de Peças"
+            className="text-xs bg-slate-900 border border-slate-700 hover:border-slate-600 text-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer shadow-xs"
+            title="Escolha o estilo das peças"
+          >
+            <option value="cburnett">Peças: Neo (Lichess Clássico)</option>
+            <option value="staunty">Peças: Staunty (Madeira & Marfim)</option>
+            <option value="merida">Peças: Merida (Clássico Europeu)</option>
+            <option value="alpha">Peças: Alpha (Minimalista Moderno)</option>
+          </select>
+
+          {/* Board Theme Selector */}
           <select
             value={boardTheme}
-            onChange={(e) => onSelectTheme(e.target.value as 'tournament' | 'wood' | 'emerald')}
+            onChange={(e) => onSelectTheme(e.target.value as BoardTheme)}
             aria-label="Tema do Tabuleiro"
-            className="text-xs bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer"
+            className="text-xs bg-slate-900 border border-slate-700 hover:border-slate-600 text-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer shadow-xs hidden sm:block"
+            title="Escolha as cores do tabuleiro"
           >
-            <option value="emerald">Tab. Verde Esmeralda</option>
-            <option value="wood">Tab. Madeira Nobre</option>
-            <option value="tournament">Tab. Torneio Clássico</option>
+            <option value="emerald">Tab: Verde Torneio</option>
+            <option value="wood">Tab: Madeira Nogueira</option>
+            <option value="tournament">Tab: Azul & Gelo</option>
+            <option value="marble">Tab: Mármore Escuro</option>
           </select>
 
           <button
             onClick={onNewGame}
-            className="px-3.5 py-1.5 text-xs font-semibold text-slate-950 bg-amber-500 hover:bg-amber-400 rounded-lg shadow-sm transition-all whitespace-nowrap shrink-0 active:scale-95"
+            className="px-3 py-1.5 text-xs font-semibold text-slate-950 bg-amber-500 hover:bg-amber-400 rounded-lg shadow-sm transition-all whitespace-nowrap shrink-0 active:scale-95"
           >
             Nova Partida
           </button>

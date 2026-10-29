@@ -1,7 +1,7 @@
-import React, { useState, useCallback, useMemo } from 'react';
-import { Chess, Square, PieceSymbol, Move } from 'chess.js';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
+import { Chess, Square, PieceSymbol } from 'chess.js';
 import { ChessPiece } from './ChessPiece';
-import { BoardArrow } from '../types/chess';
+import { BoardArrow, PieceSet, BoardTheme } from '../types/chess';
 
 interface ChessBoardProps {
   chess: Chess;
@@ -10,7 +10,8 @@ interface ChessBoardProps {
   interactive?: boolean;
   arrows?: BoardArrow[];
   lastMove?: { from: string; to: string } | null;
-  boardTheme?: 'tournament' | 'wood' | 'emerald';
+  boardTheme?: BoardTheme;
+  pieceSet?: PieceSet;
 }
 
 const FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
@@ -26,7 +27,8 @@ interface BoardSquareProps {
   isValidDest: boolean;
   isLastMove: boolean;
   isKingInCheck: boolean;
-  isDraggable: boolean;
+  isDraggingThisPiece: boolean;
+  pieceSet?: PieceSet;
   showRankLabel: boolean;
   showFileLabel: boolean;
   themeStyle: {
@@ -34,12 +36,9 @@ interface BoardSquareProps {
     dark: string;
     selected: string;
     lastMove: string;
-    check: string;
   };
-  onClick: (square: Square) => void;
-  onDragStart: (e: React.DragEvent, square: Square) => void;
-  onDragOver: (e: React.DragEvent) => void;
-  onDrop: (e: React.DragEvent, square: Square) => void;
+  onSquareClick: (square: Square) => void;
+  onPointerDownPiece: (e: React.PointerEvent, square: Square) => void;
 }
 
 const BoardSquare = React.memo<BoardSquareProps>(({
@@ -52,55 +51,62 @@ const BoardSquare = React.memo<BoardSquareProps>(({
   isValidDest,
   isLastMove,
   isKingInCheck,
-  isDraggable,
+  isDraggingThisPiece,
+  pieceSet = 'cburnett',
   showRankLabel,
   showFileLabel,
   themeStyle,
-  onClick,
-  onDragStart,
-  onDragOver,
-  onDrop,
+  onSquareClick,
+  onPointerDownPiece,
 }) => {
   let squareBg = isLight ? themeStyle.light : themeStyle.dark;
   if (isLastMove) squareBg += ` ${themeStyle.lastMove}`;
   if (isSelected) squareBg = themeStyle.selected;
-  if (isKingInCheck) squareBg = themeStyle.check;
 
   return (
     <div
-      onClick={() => onClick(square)}
-      onDragOver={onDragOver}
-      onDrop={(e) => onDrop(e, square)}
-      className={`relative flex items-center justify-center cursor-pointer select-none transition-colors duration-75 ${squareBg}`}
+      onClick={() => onSquareClick(square)}
+      className={`relative flex items-center justify-center select-none transition-colors duration-75 ${squareBg}`}
     >
       {/* Board Rank/File labels */}
       {showRankLabel && (
-        <span className="absolute top-0.5 left-1 text-[10px] font-bold opacity-60 pointer-events-none">
+        <span className="absolute top-0.5 left-1 text-[10px] font-bold opacity-60 pointer-events-none select-none">
           {rank}
         </span>
       )}
       {showFileLabel && (
-        <span className="absolute bottom-0.5 right-1 text-[10px] font-bold opacity-60 pointer-events-none">
+        <span className="absolute bottom-0.5 right-1 text-[10px] font-bold opacity-60 pointer-events-none select-none">
           {file}
         </span>
+      )}
+
+      {/* King in Check radial pulse effect */}
+      {isKingInCheck && (
+        <div
+          className="absolute inset-0 pointer-events-none z-10"
+          style={{
+            background: 'radial-gradient(circle at center, rgba(239, 68, 68, 0.95) 0%, rgba(220, 38, 38, 0.7) 40%, rgba(185, 28, 28, 0) 85%)',
+          }}
+        />
       )}
 
       {/* Chess piece */}
       {piece && (
         <div
-          draggable={isDraggable}
-          onDragStart={(e) => onDragStart(e, square)}
-          className="w-[84%] h-[84%] flex items-center justify-center transition-transform hover:scale-105 active:scale-95 cursor-grab active:cursor-grabbing z-10"
+          onPointerDown={(e) => onPointerDownPiece(e, square)}
+          className={`w-[86%] h-[86%] flex items-center justify-center z-10 cursor-grab active:cursor-grabbing piece-shadow transition-opacity duration-100 ${
+            isDraggingThisPiece ? 'opacity-20 scale-95' : 'hover:scale-105 active:scale-95'
+          }`}
         >
-          <ChessPiece type={piece.type} color={piece.color} />
+          <ChessPiece type={piece.type} color={piece.color} set={pieceSet} />
         </div>
       )}
 
-      {/* Valid Move Indicator */}
+      {/* Valid Move Indicator (Lichess style: subtle dot for empty, ring for capture) */}
       {isValidDest && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
           {piece ? (
-            <div className="w-[80%] h-[80%] rounded-full border-4 border-amber-400/80 ring-2 ring-black/20" />
+            <div className="w-[84%] h-[84%] rounded-full border-[3.5px] border-amber-400/90 shadow-sm" />
           ) : (
             <div className="w-3.5 h-3.5 rounded-full bg-amber-400/90 shadow-md ring-2 ring-black/20" />
           )}
@@ -118,11 +124,17 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
   arrows = [],
   lastMove = null,
   boardTheme = 'emerald',
+  pieceSet = 'cburnett',
 }) => {
+  const boardRef = useRef<HTMLDivElement>(null);
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
   const [validMoves, setValidMoves] = useState<Square[]>([]);
   const [promotionPending, setPromotionPending] = useState<{ from: Square; to: Square } | null>(null);
-  const [draggedSquare, setDraggedSquare] = useState<Square | null>(null);
+
+  // Pointer drag state (touch & mouse)
+  const [dragSquare, setDragSquare] = useState<Square | null>(null);
+  const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null);
+  const dragStartCoord = useRef<{ x: number; y: number } | null>(null);
 
   const displayFiles = useMemo(() => (orientation === 'w' ? FILES : [...FILES].reverse()), [orientation]);
   const displayRanks = useMemo(() => (orientation === 'w' ? RANKS : [...RANKS].reverse()), [orientation]);
@@ -131,25 +143,28 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
   const themes = useMemo(
     () => ({
       emerald: {
-        light: 'bg-[#ebd4b4] text-[#769656]',
-        dark: 'bg-[#769656] text-[#ebd4b4]',
-        selected: 'bg-amber-400/80 ring-2 ring-amber-300 ring-inset',
-        lastMove: 'bg-amber-300/40',
-        check: 'bg-rose-500/80 animate-pulse',
+        light: 'bg-[#eeeed2] text-[#769656]',
+        dark: 'bg-[#769656] text-[#eeeed2]',
+        selected: 'bg-[#baca44]/90 ring-2 ring-amber-300 ring-inset',
+        lastMove: 'bg-[#cdd26a]/60',
       },
       wood: {
-        light: 'bg-[#e3c099] text-[#b88b4a]',
-        dark: 'bg-[#b88b4a] text-[#e3c099]',
-        selected: 'bg-amber-500/80 ring-2 ring-amber-300 ring-inset',
-        lastMove: 'bg-amber-400/40',
-        check: 'bg-rose-600/80 animate-pulse',
+        light: 'bg-[#f0d9b5] text-[#b58863]',
+        dark: 'bg-[#b58863] text-[#f0d9b5]',
+        selected: 'bg-[#e5ad58]/90 ring-2 ring-amber-300 ring-inset',
+        lastMove: 'bg-[#d8a356]/60',
       },
       tournament: {
         light: 'bg-[#dee3e6] text-[#8ca2ad]',
         dark: 'bg-[#8ca2ad] text-[#dee3e6]',
-        selected: 'bg-sky-400/80 ring-2 ring-sky-300 ring-inset',
-        lastMove: 'bg-sky-300/40',
-        check: 'bg-rose-500/80 animate-pulse',
+        selected: 'bg-[#68a6d6]/90 ring-2 ring-sky-300 ring-inset',
+        lastMove: 'bg-[#7ba8cc]/60',
+      },
+      marble: {
+        light: 'bg-[#e2e8f0] text-[#475569]',
+        dark: 'bg-[#334155] text-[#cbd5e1]',
+        selected: 'bg-[#818cf8]/90 ring-2 ring-indigo-300 ring-inset',
+        lastMove: 'bg-[#6366f1]/50',
       },
     }),
     []
@@ -165,10 +180,41 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
       setSelectedSquare(null);
       setValidMoves([]);
       setPromotionPending(null);
+      setDragSquare(null);
+      setDragPos(null);
     },
     [onMove]
   );
 
+  // Convert pixel coordinates on board to Square
+  const getSquareFromCoords = useCallback(
+    (clientX: number, clientY: number): Square | null => {
+      if (!boardRef.current) return null;
+      const rect = boardRef.current.getBoundingClientRect();
+      if (
+        clientX < rect.left ||
+        clientX > rect.right ||
+        clientY < rect.top ||
+        clientY > rect.bottom
+      ) {
+        return null;
+      }
+
+      const relX = clientX - rect.left;
+      const relY = clientY - rect.top;
+      const col = Math.floor((relX / rect.width) * 8);
+      const row = Math.floor((relY / rect.height) * 8);
+
+      if (col < 0 || col >= 8 || row < 0 || row >= 8) return null;
+
+      const file = displayFiles[col];
+      const rank = displayRanks[row];
+      return `${file}${rank}` as Square;
+    },
+    [displayFiles, displayRanks]
+  );
+
+  // Click-to-move logic
   const handleSquareClick = useCallback(
     (square: Square) => {
       if (!interactive) return;
@@ -221,49 +267,81 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
     [interactive, promotionPending, selectedSquare, chess, validMoves, executeMove]
   );
 
-  const handleDragStart = useCallback(
-    (e: React.DragEvent, square: Square) => {
+  // Pointer Down (Mouse, Touch, Stylus)
+  const handlePointerDownPiece = useCallback(
+    (e: React.PointerEvent, square: Square) => {
       if (!interactive) return;
       const piece = chess.get(square);
-      if (!piece || piece.color !== chess.turn()) {
-        e.preventDefault();
-        return;
-      }
-      setDraggedSquare(square);
+      if (!piece || piece.color !== chess.turn()) return;
+
+      // Select square and compute valid moves immediately
       setSelectedSquare(square);
       const legal = chess.moves({ square, verbose: true }).map((m) => m.to as Square);
       setValidMoves(legal);
-      e.dataTransfer.setData('text/plain', square);
-      e.dataTransfer.effectAllowed = 'move';
+
+      // Start drag tracking
+      setDragSquare(square);
+      setDragPos({ x: e.clientX, y: e.clientY });
+      dragStartCoord.current = { x: e.clientX, y: e.clientY };
+
+      // Capture pointer on board container
+      if (boardRef.current) {
+        try {
+          boardRef.current.setPointerCapture(e.pointerId);
+        } catch {}
+      }
     },
     [interactive, chess]
   );
 
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-  }, []);
+  // Pointer Move (Tracking ghost piece)
+  const handlePointerMove = useCallback(
+    (e: React.PointerEvent) => {
+      if (!dragSquare) return;
+      setDragPos({ x: e.clientX, y: e.clientY });
+    },
+    [dragSquare]
+  );
 
-  const handleDrop = useCallback(
-    (e: React.DragEvent, targetSquare: Square) => {
-      e.preventDefault();
-      if (!draggedSquare) return;
+  // Pointer Up (Dropping piece)
+  const handlePointerUp = useCallback(
+    (e: React.PointerEvent) => {
+      if (!dragSquare) return;
 
-      if (validMoves.includes(targetSquare)) {
-        const piece = chess.get(draggedSquare);
+      const targetSquare = getSquareFromCoords(e.clientX, e.clientY);
+      const isDragMoved = dragStartCoord.current
+        ? Math.hypot(e.clientX - dragStartCoord.current.x, e.clientY - dragStartCoord.current.y) > 12
+        : false;
+
+      if (targetSquare && targetSquare !== dragSquare && validMoves.includes(targetSquare)) {
+        const piece = chess.get(dragSquare);
         const isPromotion = piece?.type === 'p' && (targetSquare.endsWith('8') || targetSquare.endsWith('1'));
 
         if (isPromotion) {
-          setPromotionPending({ from: draggedSquare, to: targetSquare });
+          setPromotionPending({ from: dragSquare, to: targetSquare });
         } else {
-          executeMove(draggedSquare, targetSquare);
+          executeMove(dragSquare, targetSquare);
         }
+      } else if (!isDragMoved) {
+        // Just a tap/click: leave selectedSquare active
+      } else {
+        // Dropped outside or invalid square
+        setSelectedSquare(null);
+        setValidMoves([]);
       }
 
-      setDraggedSquare(null);
+      setDragSquare(null);
+      setDragPos(null);
+      dragStartCoord.current = null;
     },
-    [draggedSquare, validMoves, chess, executeMove]
+    [dragSquare, getSquareFromCoords, validMoves, chess, executeMove]
   );
+
+  const handlePointerCancel = useCallback(() => {
+    setDragSquare(null);
+    setDragPos(null);
+    dragStartCoord.current = null;
+  }, []);
 
   // Identify king in check
   const checkSquare = useMemo(() => {
@@ -309,8 +387,17 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
     return map;
   }, [chess.fen(), displayRanks, displayFiles]);
 
+  const draggedPieceInfo = dragSquare ? chess.get(dragSquare) : null;
+
   return (
-    <div className="relative w-full max-w-[560px] aspect-square rounded-xl overflow-hidden shadow-2xl border border-slate-700/60 select-none bg-slate-900">
+    <div
+      ref={boardRef}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerCancel}
+      style={{ touchAction: 'none' }}
+      className="relative w-full max-w-[560px] aspect-square rounded-2xl overflow-hidden shadow-2xl border-4 border-slate-800/80 select-none bg-slate-900"
+    >
       <div className="grid grid-cols-8 grid-rows-8 w-full h-full">
         {displayRanks.map((rank, rIdx) =>
           displayFiles.map((file, fIdx) => {
@@ -321,7 +408,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
             const isValidDest = validMoves.includes(square);
             const isLastMove = Boolean(lastMove && (lastMove.from === square || lastMove.to === square));
             const isKingInCheck = checkSquare === square;
-            const isDraggable = Boolean(interactive && piece && piece.color === chess.turn());
+            const isDraggingThisPiece = dragSquare === square;
 
             return (
               <BoardSquare
@@ -335,14 +422,13 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
                 isValidDest={isValidDest}
                 isLastMove={isLastMove}
                 isKingInCheck={isKingInCheck}
-                isDraggable={isDraggable}
+                isDraggingThisPiece={isDraggingThisPiece}
+                pieceSet={pieceSet}
                 showRankLabel={fIdx === 0}
                 showFileLabel={rIdx === 7}
                 themeStyle={currentTheme}
-                onClick={handleSquareClick}
-                onDragStart={handleDragStart}
-                onDragOver={handleDragOver}
-                onDrop={handleDrop}
+                onSquareClick={handleSquareClick}
+                onPointerDownPiece={handlePointerDownPiece}
               />
             );
           })
@@ -383,7 +469,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
                 x2={end.x}
                 y2={end.y}
                 stroke={colorMap[arr.color] || '#10b981'}
-                strokeWidth={arr.width || 2.2}
+                strokeWidth={arr.width || 2.4}
                 strokeLinecap="round"
                 opacity={0.88}
                 markerEnd={`url(#arrow-${arr.color})`}
@@ -393,9 +479,22 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
         </svg>
       )}
 
+      {/* Ghost Piece Following Finger/Cursor During Drag */}
+      {dragSquare && dragPos && draggedPieceInfo && (
+        <div
+          className="fixed pointer-events-none z-50 transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 drop-shadow-2xl scale-110 opacity-95 transition-transform"
+          style={{
+            left: `${dragPos.x}px`,
+            top: `${dragPos.y}px`,
+          }}
+        >
+          <ChessPiece type={draggedPieceInfo.type} color={draggedPieceInfo.color} set={pieceSet} />
+        </div>
+      )}
+
       {/* Pawn Promotion Modal */}
       {promotionPending && (
-        <div className="absolute inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+        <div className="absolute inset-0 bg-black/75 backdrop-blur-xs flex items-center justify-center z-50 p-4">
           <div className="bg-slate-900 border border-slate-700 p-4 rounded-xl shadow-2xl flex flex-col items-center gap-3">
             <span className="text-sm font-semibold text-slate-200">Escolha a Promoção</span>
             <div className="flex gap-2">
@@ -405,7 +504,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
                   onClick={() => executeMove(promotionPending.from, promotionPending.to, pType)}
                   className="w-14 h-14 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg flex items-center justify-center p-2 transition-all hover:scale-105"
                 >
-                  <ChessPiece type={pType} color={chess.turn()} />
+                  <ChessPiece type={pType} color={chess.turn()} set={pieceSet} />
                 </button>
               ))}
             </div>
