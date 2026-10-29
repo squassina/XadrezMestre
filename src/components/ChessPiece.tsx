@@ -1,6 +1,7 @@
 import React from 'react';
 import { PieceSymbol, Color } from 'chess.js';
-import { PieceSet } from '../types/chess';
+
+export type PieceSet = 'staunty' | 'modern-minimalist' | 'merida' | 'alpha' | 'cburnett';
 
 interface ChessPieceProps {
   type: PieceSymbol;
@@ -12,111 +13,13 @@ interface ChessPieceProps {
 export const ChessPiece: React.FC<ChessPieceProps> = React.memo(({
   type,
   color,
-  set = 'cburnett',
+  set = 'staunty',
   className = 'w-full h-full',
 }) => {
   const isWhite = color === 'w';
 
   // -------------------------------------------------------------
-  // 0. MODERN-MINIMALIST: Clean, Vector, Sleek without Heavy Borders
-  // -------------------------------------------------------------
-  if (set === 'modern-minimalist') {
-    const fill = isWhite ? '#ffffff' : '#1e293b';
-    const stroke = isWhite ? '#334155' : '#0f172a';
-    const innerStroke = isWhite ? '#94a3b8' : '#475569';
-
-    return (
-      <svg viewBox="0 0 45 45" className={className} xmlns="http://www.w3.org/2000/svg">
-        {type === 'p' && (
-          <g fill={fill} stroke={stroke} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
-            {/* Top sphere */}
-            <circle cx="22.5" cy="13.5" r="4.3" />
-            {/* Collar line */}
-            <line x1="18.5" y1="19" x2="26.5" y2="19" strokeWidth="1.2" />
-            {/* Elegant tapered body */}
-            <path d="M 19,20 C 17,24 15,28 13.5,35 L 31.5,35 C 30,28 28,24 26,20 Z" />
-            {/* Minimalist Base */}
-            <path d="M 12,35.5 C 12,37.5 14,38.5 22.5,38.5 C 31,38.5 33,37.5 33,35.5 Z" />
-            {/* Subtle inner detail */}
-            <line x1="16.5" y1="33" x2="28.5" y2="33" stroke={innerStroke} strokeWidth="0.9" />
-          </g>
-        )}
-
-        {type === 'n' && (
-          <g fill={fill} stroke={stroke} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
-            {/* Clean Horse Silhouette */}
-            <path d="M 21.5,9 C 18,9 13,11 11.5,17 C 10.5,21 8,24 7,27 C 8.5,27.8 11.5,27.5 13,26 C 11.5,29 13.5,34 14,35 L 31,35 C 31.5,30 33,21 28,14 C 27.5,11 25,9 21.5,9 Z" />
-            {/* Stylized Ear */}
-            <path d="M 20.5,9 L 23.5,5.5 L 24.5,9.5" fill={fill} />
-            {/* Sleek Minimalist Eye */}
-            <circle cx="15" cy="16.5" r="1.3" fill={stroke} stroke="none" />
-            {/* Mane line */}
-            <path d="M 24,13 C 25,18 23.5,24 19,27" fill="none" stroke={innerStroke} strokeWidth="1" />
-            {/* Base */}
-            <path d="M 12.5,35.5 C 12.5,37.5 14.5,38.5 22.5,38.5 C 30.5,38.5 32.5,37.5 32.5,35.5 Z" />
-          </g>
-        )}
-
-        {type === 'b' && (
-          <g fill={fill} stroke={stroke} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
-            {/* Top sphere */}
-            <circle cx="22.5" cy="8" r="1.8" />
-            {/* Mitre body */}
-            <path d="M 22.5,10 C 17,13.5 16,21 17.5,26 C 16,29 14.5,32 14,35 L 31,35 C 30.5,32 29,29 27.5,26 C 29,21 28,13.5 22.5,10 Z" />
-            {/* Diagonal mitre slit */}
-            <line x1="21" y1="15" x2="25.5" y2="21" stroke={stroke} strokeWidth="1.4" />
-            {/* Base */}
-            <path d="M 12.5,35.5 C 12.5,37.5 14.5,38.5 22.5,38.5 C 30.5,38.5 32.5,37.5 32.5,35.5 Z" />
-            <line x1="17" y1="33" x2="28" y2="33" stroke={innerStroke} strokeWidth="0.9" />
-          </g>
-        )}
-
-        {type === 'r' && (
-          <g fill={fill} stroke={stroke} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
-            {/* Battlements / Crown */}
-            <path d="M 13.5,17 L 13.5,10 L 17,10 L 17,13 L 21,13 L 21,10 L 24,10 L 24,13 L 28,13 L 28,10 L 31.5,10 L 31.5,17 Z" />
-            {/* Waist & Body */}
-            <path d="M 15.5,17 L 14.5,35 L 30.5,35 L 29.5,17 Z" />
-            {/* Base */}
-            <path d="M 12,35.5 C 12,37.5 14,38.5 22.5,38.5 C 31,38.5 33,37.5 33,35.5 Z" />
-            <line x1="16.5" y1="33" x2="28.5" y2="33" stroke={innerStroke} strokeWidth="0.9" />
-          </g>
-        )}
-
-        {type === 'q' && (
-          <g fill={fill} stroke={stroke} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
-            {/* Three modern crown tips with spheres */}
-            <circle cx="10" cy="14" r="1.6" />
-            <circle cx="22.5" cy="9.5" r="2" />
-            <circle cx="35" cy="14" r="1.6" />
-            {/* Crown curves */}
-            <path d="M 10,15.5 L 14,24 L 22.5,11.5 L 31,24 L 35,15.5 C 34.5,22 31.5,27 29.5,30 C 27.5,32 29,34 30.5,35 L 14.5,35 C 16,34 17.5,32 15.5,30 C 13.5,27 10.5,22 10,15.5 Z" />
-            {/* Waist accent */}
-            <ellipse cx="22.5" cy="28" rx="4" ry="1.5" fill="none" stroke={innerStroke} strokeWidth="0.9" />
-            {/* Base */}
-            <path d="M 12,35.5 C 12,37.5 14,38.5 22.5,38.5 C 31,38.5 33,37.5 33,35.5 Z" />
-          </g>
-        )}
-
-        {type === 'k' && (
-          <g fill={fill} stroke={stroke} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
-            {/* Clean Cross */}
-            <path d="M 22.5,4.5 L 22.5,10.5 M 19.5,7.5 L 25.5,7.5" stroke={stroke} strokeWidth="1.5" strokeLinecap="round" />
-            {/* Crown */}
-            <path d="M 22.5,11 C 15,11 13.5,17 16,22 C 14,26 13,31 13,35 L 32,35 C 32,31 31,26 29,22 C 31.5,17 30,11 22.5,11 Z" />
-            {/* Central arch */}
-            <path d="M 17,21 C 20,23 25,23 28,21" fill="none" stroke={innerStroke} strokeWidth="1" />
-            {/* Base */}
-            <path d="M 11.5,35.5 C 11.5,37.5 13.5,38.5 22.5,38.5 C 31.5,38.5 33.5,37.5 33.5,35.5 Z" />
-            <line x1="16" y1="33" x2="29" y2="33" stroke={innerStroke} strokeWidth="0.9" />
-          </g>
-        )}
-      </svg>
-    );
-  }
-
-  // -------------------------------------------------------------
-  // 1. STAUNTY: Realistic Wood & Ivory with Gradients & Polish
+  // 1. STAUNTY: Realista com Gradientes e Polimento estilo Madeira / Marfim
   // -------------------------------------------------------------
   if (set === 'staunty') {
     const whiteGradId = `staunty-white-${type}`;
@@ -202,7 +105,80 @@ export const ChessPiece: React.FC<ChessPieceProps> = React.memo(({
   }
 
   // -------------------------------------------------------------
-  // 2. MERIDA: Classical European Engraving Style
+  // 2. MODERN-MINIMALIST: Vetor Limpo, Leve e Elegante
+  // -------------------------------------------------------------
+  if (set === 'modern-minimalist') {
+    const fill = isWhite ? '#ffffff' : '#1e293b';
+    const stroke = isWhite ? '#334155' : '#0f172a';
+    const innerStroke = isWhite ? '#94a3b8' : '#475569';
+
+    return (
+      <svg viewBox="0 0 45 45" className={className} xmlns="http://www.w3.org/2000/svg">
+        {type === 'p' && (
+          <g fill={fill} stroke={stroke} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="22.5" cy="13.5" r="4.3" />
+            <line x1="18.5" y1="19" x2="26.5" y2="19" strokeWidth="1.2" />
+            <path d="M 19,20 C 17,24 15,28 13.5,35 L 31.5,35 C 30,28 28,24 26,20 Z" />
+            <path d="M 12,35.5 C 12,37.5 14,38.5 22.5,38.5 C 31,38.5 33,37.5 33,35.5 Z" />
+            <line x1="16.5" y1="33" x2="28.5" y2="33" stroke={innerStroke} strokeWidth="0.9" />
+          </g>
+        )}
+
+        {type === 'n' && (
+          <g fill={fill} stroke={stroke} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M 21.5,9 C 18,9 13,11 11.5,17 C 10.5,21 8,24 7,27 C 8.5,27.8 11.5,27.5 13,26 C 11.5,29 13.5,34 14,35 L 31,35 C 31.5,30 33,21 28,14 C 27.5,11 25,9 21.5,9 Z" />
+            <path d="M 20.5,9 L 23.5,5.5 L 24.5,9.5" fill={fill} />
+            <circle cx="15" cy="16.5" r="1.3" fill={stroke} stroke="none" />
+            <path d="M 24,13 C 25,18 23.5,24 19,27" fill="none" stroke={innerStroke} strokeWidth="1" />
+            <path d="M 12.5,35.5 C 12.5,37.5 14.5,38.5 22.5,38.5 C 30.5,38.5 32.5,37.5 32.5,35.5 Z" />
+          </g>
+        )}
+
+        {type === 'b' && (
+          <g fill={fill} stroke={stroke} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="22.5" cy="8" r="1.8" />
+            <path d="M 22.5,10 C 17,13.5 16,21 17.5,26 C 16,29 14.5,32 14,35 L 31,35 C 30.5,32 29,29 27.5,26 C 29,21 28,13.5 22.5,10 Z" />
+            <line x1="21" y1="15" x2="25.5" y2="21" stroke={stroke} strokeWidth="1.4" />
+            <path d="M 12.5,35.5 C 12.5,37.5 14.5,38.5 22.5,38.5 C 30.5,38.5 32.5,37.5 32.5,35.5 Z" />
+            <line x1="17" y1="33" x2="28" y2="33" stroke={innerStroke} strokeWidth="0.9" />
+          </g>
+        )}
+
+        {type === 'r' && (
+          <g fill={fill} stroke={stroke} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M 13.5,17 L 13.5,10 L 17,10 L 17,13 L 21,13 L 21,10 L 24,10 L 24,13 L 28,13 L 28,10 L 31.5,10 L 31.5,17 Z" />
+            <path d="M 15.5,17 L 14.5,35 L 30.5,35 L 29.5,17 Z" />
+            <path d="M 12,35.5 C 12,37.5 14,38.5 22.5,38.5 C 31,38.5 33,37.5 33,35.5 Z" />
+            <line x1="16.5" y1="33" x2="28.5" y2="33" stroke={innerStroke} strokeWidth="0.9" />
+          </g>
+        )}
+
+        {type === 'q' && (
+          <g fill={fill} stroke={stroke} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="10" cy="14" r="1.6" />
+            <circle cx="22.5" cy="9.5" r="2" />
+            <circle cx="35" cy="14" r="1.6" />
+            <path d="M 10,15.5 L 14,24 L 22.5,11.5 L 31,24 L 35,15.5 C 34.5,22 31.5,27 29.5,30 C 27.5,32 29,34 30.5,35 L 14.5,35 C 16,34 17.5,32 15.5,30 C 13.5,27 10.5,22 10,15.5 Z" />
+            <ellipse cx="22.5" cy="28" rx="4" ry="1.5" fill="none" stroke={innerStroke} strokeWidth="0.9" />
+            <path d="M 12,35.5 C 12,37.5 14,38.5 22.5,38.5 C 31,38.5 33,37.5 33,35.5 Z" />
+          </g>
+        )}
+
+        {type === 'k' && (
+          <g fill={fill} stroke={stroke} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M 22.5,4.5 L 22.5,10.5 M 19.5,7.5 L 25.5,7.5" stroke={stroke} strokeWidth="1.5" strokeLinecap="round" />
+            <path d="M 22.5,11 C 15,11 13.5,17 16,22 C 14,26 13,31 13,35 L 32,35 C 32,31 31,26 29,22 C 31.5,17 30,11 22.5,11 Z" />
+            <path d="M 17,21 C 20,23 25,23 28,21" fill="none" stroke={innerStroke} strokeWidth="1" />
+            <path d="M 11.5,35.5 C 11.5,37.5 13.5,38.5 22.5,38.5 C 31.5,38.5 33.5,37.5 33.5,35.5 Z" />
+            <line x1="16" y1="33" x2="29" y2="33" stroke={innerStroke} strokeWidth="0.9" />
+          </g>
+        )}
+      </svg>
+    );
+  }
+
+  // -------------------------------------------------------------
+  // 3. MERIDA: Estilo Clássico de Gravura Europeia
   // -------------------------------------------------------------
   if (set === 'merida') {
     const fill = isWhite ? '#f8fafc' : '#1e293b';
@@ -267,7 +243,7 @@ export const ChessPiece: React.FC<ChessPieceProps> = React.memo(({
   }
 
   // -------------------------------------------------------------
-  // 3. ALPHA: Sleek, Contemporary Geometric Minimalist Style
+  // 4. ALPHA: Contemporâneo Geométrico com Detalhes em Azul
   // -------------------------------------------------------------
   if (set === 'alpha') {
     const fill = isWhite ? '#ffffff' : '#0f172a';
@@ -330,7 +306,7 @@ export const ChessPiece: React.FC<ChessPieceProps> = React.memo(({
   }
 
   // -------------------------------------------------------------
-  // 4. CBURNETT: Official Tournament / Lichess Standard (Default)
+  // 5. CBURNETT: Padrão Lichess / Torneios Oficiais (Fallback)
   // -------------------------------------------------------------
   const fill = isWhite ? '#FFFFFF' : '#1e293b';
   const stroke = isWhite ? '#1e293b' : '#f8fafc';
