@@ -38,7 +38,8 @@ jobs:
 
       - name: Avisar quando o deploy estiver sem configuração GCP
         if: ${{ vars.GCP_WIF_PROVIDER == '' || vars.GCP_SERVICE_ACCOUNT == '' || vars.GCP_REGION == '' }}
-        run: echo "::warning::Backend lint passou, mas o deploy foi ignorado: configure GCP_WIF_PROVIDER, GCP_SERVICE_ACCOUNT e GCP_REGION nas variáveis do repositório."
+        run: |
+          echo "::warning::Backend lint passou, mas o deploy foi ignorado: configure GCP_WIF_PROVIDER, GCP_SERVICE_ACCOUNT e GCP_REGION nas variáveis do repositório."
 
       - name: Autenticar no Google Cloud
         if: ${{ vars.GCP_WIF_PROVIDER != '' && vars.GCP_SERVICE_ACCOUNT != '' && vars.GCP_REGION != '' }}
