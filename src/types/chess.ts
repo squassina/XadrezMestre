@@ -58,6 +58,7 @@ export interface BotConfig {
   blunderChance: number;
   avatar: string;
   description: string;
+  maxQuiescenceDepth?: number;
 }
 
 export interface TacticalPuzzle {
@@ -113,5 +114,5 @@ export interface TimeControl {
   description: string;
 }
 
-export type PieceSet = 'staunty' | 'modern' | 'merida' | 'alpha';
+export type PieceSet = 'staunty' | 'modern' | 'merida' | 'alpha' | 'cburnett';
 export type BoardTheme = 'emerald' | 'wood' | 'tournament' | 'marble';

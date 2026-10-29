@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { AnalyzedMove, TimeControl, MoveQuality } from '../types/chess';
-import { 
-  Trophy, AlertTriangle, Sparkles, TrendingUp, ArrowRight, 
-  RotateCcw, CheckCircle2, XCircle, Clock, Zap, Target, X, ChevronRight 
+import {
+  Trophy, AlertTriangle, Sparkles, TrendingUp, ArrowRight,
+  RotateCcw, CheckCircle2, XCircle, Clock, Zap, Target, X, ChevronRight
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -183,7 +183,7 @@ export const GameReportModal: React.FC<GameReportModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
       <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-4xl w-full p-4 sm:p-6 shadow-2xl flex flex-col gap-5 text-slate-100 max-h-[92vh] overflow-y-auto">
-        
+
         {/* Header */}
         <div className="flex items-start justify-between border-b border-slate-800 pb-4">
           <div className="flex items-center gap-3">

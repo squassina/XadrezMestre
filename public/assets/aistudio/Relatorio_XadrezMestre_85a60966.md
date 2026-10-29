@@ -195,8 +195,8 @@ import { analyzeMoveRemote } from './utils/remoteEngine';
 
 const a = await analyzeMoveRemote(fenBefore, playedSan, 12);
 if (a) {
-  analyzed.quality      = a.quality === 'excellent' ? 'best' : a.quality; // o tipo MoveQuality não tem 'excellent'
-  analyzed.qualityLabel = a.quality === 'excellent' ? 'Excelente' : analyzed.qualityLabel;
+  analyzed.quality      = a.quality === 'brilliant' ? 'best' : a.quality;
+  analyzed.qualityLabel = a.quality === 'brilliant' ? 'Excelente' : analyzed.qualityLabel;
   analyzed.evalBefore   = a.cpBefore;   // centipawns, lado das brancas
   analyzed.evalAfter    = a.cpAfter;
   analyzed.evalDiff     = Math.round(a.lossPct * 10);   // ou adapte os limiares do app

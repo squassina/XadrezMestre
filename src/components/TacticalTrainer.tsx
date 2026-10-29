@@ -5,8 +5,8 @@ import { INITIAL_PUZZLES, getPersonalizedPuzzles } from '../data/puzzles';
 import { ChessBoard } from './ChessBoard';
 import { soundEffects } from '../utils/sound';
 import confetti from 'canvas-confetti';
-import { 
-  Trophy, Flame, Target, ArrowRight, RotateCcw, Lightbulb, CheckCircle2, XCircle, 
+import {
+  Trophy, Flame, Target, ArrowRight, RotateCcw, Lightbulb, CheckCircle2, XCircle,
   Sparkles, Award, ShieldAlert, Zap
 } from 'lucide-react';
 
@@ -21,7 +21,7 @@ export const TacticalTrainer: React.FC<TacticalTrainerProps> = ({
   playerStats,
   onUpdateStats,
   boardTheme,
-  pieceSet = 'cburnett',
+  pieceSet = 'staunty',
 }) => {
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [puzzles, setPuzzles] = useState<TacticalPuzzle[]>([]);

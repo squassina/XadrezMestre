@@ -1,23 +1,20 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45" width="100%" height="100%">
-                <defs>
-                    <linearGradient id="stauntyIvory" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stop-color="#FFFDF7"/>
-                        <stop offset="50%" stop-color="#F3E2C4"/>
-                        <stop offset="100%" stop-color="#CFA268"/>
-                    </linearGradient>
-                    <linearGradient id="stauntyEbony" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stop-color="#542E16"/>
-                        <stop offset="55%" stop-color="#2D170B"/>
-                        <stop offset="100%" stop-color="#120804"/>
-                    </linearGradient>
-                    <filter id="staunty3dShadow" x="-15%" y="-15%" width="130%" height="130%">
-                        <feDropShadow dx="1.2" dy="2" stdDeviation="1.2" flood-color="#000000" flood-opacity="0.45"/>
-                    </filter>
-                </defs>
-            <g filter="url(#staunty3dShadow)">
-                    <rect x="12.5" y="37" width="20" height="4" rx="1.5" fill="url(#stauntyEbony)" stroke="#120703" stroke-width="1.5"/>
-                    <path d="M15.5 37 C16.5 30, 17.5 24, 17.5 21 H27.5 C27.5 24, 28.5 30, 29.5 37 Z" fill="url(#stauntyEbony)" stroke="#120703" stroke-width="1.5"/>
-                    <rect x="16" y="18.5" width="13" height="3" rx="1" fill="url(#stauntyEbony)" stroke="#120703" stroke-width="1.5"/>
-                    <circle cx="22.5" cy="12" r="5.8" fill="url(#stauntyEbony)" stroke="#120703" stroke-width="1.5"/>
-                    <path d="M18 10 C22 8, 28 8, 30 11" stroke="#A86A3D" stroke-width="1.2" opacity="0.4" fill="none" stroke-linecap="round"/>
-                </g></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45">
+<defs>
+    <linearGradient id="staunty-white-p" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fffaf0" />
+      <stop offset="45%" stop-color="#f7ecdc" />
+      <stop offset="100%" stop-color="#dfc5a4" />
+    </linearGradient>
+    <linearGradient id="staunty-black-p" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#443228" />
+      <stop offset="50%" stop-color="#2c1f18" />
+      <stop offset="100%" stop-color="#150e0a" />
+    </linearGradient>
+  </defs>
+  <g fill="url(#staunty-black-p)" stroke="#140c09" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 22.5,9 C 20,9 18,11 18,13.5 C 18,14.8 18.6,16 19.5,16.8 C 17,18.5 16,21 16,23.5 C 16,25.5 17,27 18.5,28 C 15,30 11,34 11,40 L 34,40 C 34,34 30,30 26.5,28 C 28,27 29,25.5 29,23.5 C 29,21 28,18.5 25.5,16.8 C 26.4,16 27,14.8 27,13.5 C 27,11 25,9 22.5,9 Z" />
+    <circle cx="22.5" cy="13.5" r="3.2" fill="url(#staunty-black-p)" />
+    <path d="M 17,37.5 L 28,37.5 M 19,30 L 26,30" stroke="#4a3525" stroke-width="1" fill="none" />
+    <ellipse cx="21" cy="12" rx="1.5" ry="1" fill="#5c4033" opacity="0.6" stroke="none" />
+  </g>
+</svg>

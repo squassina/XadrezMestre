@@ -3,7 +3,7 @@ import { Chess, Square, PieceSymbol } from 'chess.js';
 import { ChessPiece } from './ChessPiece';
 import { BoardArrow, PieceSet } from '../types/chess';
 
-export type BoardTheme = 'staunty' | 'modern-minimalist' | 'merida' | 'alpha' | 'emerald' | 'wood' | 'tournament' | 'marble';
+export type BoardTheme = 'staunty' | 'modern' | 'merida' | 'alpha' | 'emerald' | 'wood' | 'tournament' | 'marble';
 
 interface ChessBoardProps {
   chess: Chess;
@@ -164,7 +164,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
         destDot: 'bg-amber-400/90',
         borderColor: 'border-[#422a1d]',
       },
-      'modern-minimalist': {
+      'modern': {
         light: 'bg-[#e2e8f0]',
         dark: 'bg-[#475569]',
         selected: 'bg-[#0284c7]/80 ring-2 ring-sky-300 ring-inset',

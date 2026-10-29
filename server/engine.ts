@@ -242,7 +242,7 @@ export class EnginePool {
       : lossPct >= 10 ? 'mistake'
       : lossPct >= 5 ? 'inaccuracy'
       : lossPct >= 2 ? 'good'
-      : 'excellent';
+      : 'brilliant';
 
     // placares das BRANCAS (a barra de avaliação usa esse lado)
     const sign = mover === 'w' ? 1 : -1;
@@ -269,7 +269,7 @@ export interface MoveAnalysis {
   cpBefore: number;   // centipawns, ponto de vista das brancas
   cpAfter: number;
   lossPct: number;    // pontos percentuais de chance de vitória perdidos
-  quality: 'best' | 'excellent' | 'good' | 'inaccuracy' | 'mistake' | 'blunder';
+  quality: 'best' | 'brilliant' | 'good' | 'inaccuracy' | 'mistake' | 'blunder';
   pv: string[];
   engine: string;
 }

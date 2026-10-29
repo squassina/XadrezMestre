@@ -10,7 +10,7 @@ export interface RemoteSearch { bestMove: string; san: string | null; lines: Eng
 export interface MoveAnalysis {
   bestMove: string; bestSan: string | null; playedSan: string;
   cpBefore: number; cpAfter: number; lossPct: number;
-  quality: 'best' | 'excellent' | 'good' | 'inaccuracy' | 'mistake' | 'blunder';
+  quality: 'best' | 'brilliant' | 'good' | 'inaccuracy' | 'mistake' | 'blunder';
   pv: string[]; engine: string;
 }
 

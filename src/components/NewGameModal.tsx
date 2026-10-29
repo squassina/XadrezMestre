@@ -181,7 +181,7 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
           </div>
         </div>
 
-        {/* Piece Set Selection: cburnett vs Modern-Minimalist */}
+        {/* Piece Set Selection: cburnett vs Modern */}
         <div className="space-y-2 pt-1 border-t border-slate-800">
           <div className="flex items-center justify-between">
             <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
@@ -189,7 +189,7 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
               <span>Estilo Visual das Peças:</span>
             </label>
             <span className="text-[11px] font-mono text-amber-400 font-semibold">
-              {selectedPieceSet === 'modern-minimalist' ? 'Modern-Minimalist' : 'cburnett'}
+              {selectedPieceSet === 'modern' ? 'Modern' : 'cburnett'}
             </span>
           </div>
 
@@ -214,15 +214,15 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
 
             <button
               type="button"
-              onClick={() => setSelectedPieceSet('modern-minimalist')}
+              onClick={() => setSelectedPieceSet('modern')}
               className={`p-2.5 rounded-xl border text-left flex items-center gap-3 transition-all ${
-                selectedPieceSet === 'modern-minimalist'
+                selectedPieceSet === 'modern'
                   ? 'bg-amber-500/15 border-amber-500/60 ring-1 ring-amber-500/40 text-amber-200'
                   : 'bg-slate-950/60 border-slate-800 hover:bg-slate-800/60 text-slate-300'
               }`}
             >
               <div className="w-9 h-9 shrink-0 flex items-center justify-center p-0.5 bg-slate-900 rounded-lg border border-slate-800">
-                <ChessPiece type="n" color="w" set="modern-minimalist" />
+                <ChessPiece type="n" color="w" set="modern" />
               </div>
               <div className="flex flex-col">
                 <span className="text-xs font-bold text-slate-100">Modern-Minimalist</span>

@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Chess, Square, PieceSymbol, Move } from 'chess.js';
-import { 
+import {
   AnalyzedMove, BotLevel, PlayerStats, BoardArrow, BlunderCategory, MoveQuality, TimeControl,
-  PieceSet, BoardTheme 
+  PieceSet, BoardTheme
 } from './types/chess';
 import { analyzeMove, analyzeMoveAsync, getBotMove, evaluateBoard, detectBlunderCategory, BOT_CONFIGS } from './utils/engine';
 import { botMove, analyzeMoveRemote, BOT_ENGINE, warmUp, API_BASE_URL } from './utils/remoteEngine';
@@ -21,9 +21,9 @@ import { MistakeAnalytics } from './components/MistakeAnalytics';
 import { ChessPrinciples } from './components/ChessPrinciples';
 import { NewGameModal } from './components/NewGameModal';
 import { GameReportModal } from './components/GameReportModal';
-import { 
-  RotateCcw, Sparkles, Trophy, Lightbulb, RefreshCw, Flag, 
-  HelpCircle, ChevronRight, User, Bot, AlertTriangle, Timer, Zap, Flame, Clock, BarChart2 
+import {
+  RotateCcw, Sparkles, Trophy, Lightbulb, RefreshCw, Flag,
+  HelpCircle, ChevronRight, User, Bot, AlertTriangle, Timer, Zap, Flame, Clock, BarChart2
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -61,9 +61,9 @@ export default function App() {
   });
   const [pieceSet, setPieceSet] = useState<PieceSet>(() => {
     try {
-      return (localStorage.getItem('xadrez_piece_set') as PieceSet) || 'cburnett';
+      return (localStorage.getItem('xadrez_piece_set') as PieceSet) || 'alpha';
     } catch {
-      return 'cburnett';
+      return 'alpha';
     }
   });
 

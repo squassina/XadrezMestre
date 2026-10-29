@@ -1,7 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45" width="100%" height="100%"><g>
-                    <rect x="11" y="37" width="23" height="4" rx="1" fill="#FAF8F3" stroke="#111111" stroke-width="1.5"/>
-                    <path d="M13 37 C13 31, 15 27, 18 24 C15.5 22, 13.5 18, 13.5 14 C13.5 10, 17 7.5, 21.5 7.5 C23 6, 25 5, 27.5 5 C29 5, 30.5 6, 30.5 8 C30.5 10.5, 28 12.5, 27.5 14.5 C31 17.5, 32.5 23, 32 37 Z" fill="#FAF8F3" stroke="#111111" stroke-width="1.5"/>
-                    <circle cx="19" cy="13" r="1.8" fill="#111111"/>
-                    <!-- Carved Mane Lines -->
-                    <path d="M23 8 C25 11, 26 14, 27 18 M20 18 C22 22, 24 26, 25 30" stroke="#111111" stroke-width="0.9" fill="none"/>
-                </g></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45">
+<g fill="#f8fafc" stroke="#0f172a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 22,8 C 14,8 10,13 10,21 C 10,24 8,26 6.5,28 C 9,30 13,29 14,27 C 13.5,30 16,34 14,39 L 34,39 C 34,29 35,18 27,12 C 27,10 25,8 22,8 Z" />
+    <path d="M 23,15 C 22,18 17,21 14,22" stroke="#94a3b8" stroke-width="1.2" fill="none" />
+    <circle cx="14" cy="17" r="1.5" fill="#0f172a" stroke="none" />
+    <path d="M 20,29 C 24,28 27,24 28,19" stroke="#94a3b8" stroke-width="1" fill="none" />
+  </g>
+</svg>
