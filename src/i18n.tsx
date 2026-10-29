@@ -199,6 +199,7 @@ const translations: Record<string, string> = {
   'Motor': 'Engine',
   'Profundidade': 'Depth',
   'Avaliação': 'Evaluation',
+
 };
 
 const I18nContext = createContext<TranslationContextValue | null>(null);
