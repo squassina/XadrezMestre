@@ -2,30 +2,34 @@ import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import dotenv from 'dotenv';
 import { GoogleGenAI } from '@google/genai';
-import { engineRouter } from './server/engineRoutes';
-import { enginePool } from './server/engine';
+import fs from 'node:fs';
+import { mountEngineRoutes } from './server/engineRoutes';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
-app.use(express.json({ limit: '50kb' }));
+// Atrás do proxy do Cloud Run/Fly: req.ip passa a ser o IP real do cliente (rate limit)
+app.set('trust proxy', 1);
+app.use(express.json({ limit: '20kb' }));
 
-// CORS headers for API calls
+// CORS: o front fica no GitHub Pages (outro domínio). Ex.: ALLOWED_ORIGIN=https://squassina.github.io
+const allowedOrigins = (process.env.ALLOWED_ORIGIN || '').split(',').map((s) => s.trim()).filter(Boolean);
 app.use((req, res, next) => {
-  const origin = req.headers.origin || '*';
-  res.header('Access-Control-Allow-Origin', origin);
-  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(204);
+  const origin = req.headers.origin;
+  if (origin && (allowedOrigins.includes('*') || allowedOrigins.includes(origin))) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   }
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
   next();
 });
 
-// Mount Stockfish Engine Routes
-app.use('/api/engine', engineRouter);
+// Motor Stockfish nativo (/api/engine/*)
+const enginePool = mountEngineRoutes(app);
 
 // Initialize Gemini SDK if API key is present
 const apiKey = process.env.GEMINI_API_KEY;
@@ -214,7 +218,8 @@ async function startServer() {
       appType: 'spa',
     });
     app.use(vite.middlewares);
-  } else {
+  } else if (fs.existsSync('dist/index.html')) {
+    // modo "tudo junto". Em deploy só-API (front no Pages) não existe dist/ e isso é ignorado.
     app.use(express.static('dist'));
     app.get('*', (_req, res) => {
       res.sendFile('dist/index.html', { root: '.' });
@@ -225,16 +230,10 @@ async function startServer() {
     console.log(`Chess Coach Server running on port ${PORT}`);
   });
 
-  const gracefulShutdown = () => {
-    console.log('Shutting down server and engine pool...');
-    enginePool.destroy();
-    server.close(() => {
-      process.exit(0);
-    });
-  };
-
-  process.on('SIGTERM', gracefulShutdown);
-  process.on('SIGINT', gracefulShutdown);
+  // Encerramento limpo (Cloud Run envia SIGTERM): não deixa processos Stockfish órfãos
+  const shutdown = () => { enginePool.close(); server.close(() => process.exit(0)); };
+  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', shutdown);
 }
 
 startServer().catch((err) => {

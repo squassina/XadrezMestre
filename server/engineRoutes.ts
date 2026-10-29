@@ -1,98 +1,63 @@
-import { Router, Request, Response } from 'express';
-import { Chess } from 'chess.js';
-import { enginePool } from './engine';
+// server/engineRoutes.ts — rotas HTTP do motor
+import type { Express, Request, Response, NextFunction } from 'express';
+import { EnginePool } from './engine';
 
-export const engineRouter = Router();
-
-// Simple in-memory rate limiter per IP (max 30 requests per 10 seconds)
-const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
-const RATE_LIMIT_WINDOW_MS = 10000;
-const MAX_REQUESTS_PER_WINDOW = 35;
-
-function checkRateLimit(req: Request, res: Response, next: () => void) {
-  const ip = req.ip || req.socket.remoteAddress || 'unknown';
-  const now = Date.now();
-  let record = rateLimitMap.get(ip);
-
-  if (!record || now > record.resetTime) {
-    record = { count: 1, resetTime: now + RATE_LIMIT_WINDOW_MS };
-    rateLimitMap.set(ip, record);
-  } else {
-    record.count++;
-  }
-
-  if (record.count > MAX_REQUESTS_PER_WINDOW) {
-    return res.status(429).json({ error: 'Muitas requisições ao motor. Aguarde alguns segundos.' });
-  }
-
-  next();
+// limitador simples por IP (janela de 10 s) — troque por express-rate-limit se preferir
+function rateLimit(max: number, windowMs = 10_000) {
+  const hits = new Map<string, { n: number; reset: number }>();
+  return (req: Request, res: Response, next: NextFunction) => {
+    const ip = req.ip || 'x';
+    const now = Date.now();
+    const h = hits.get(ip);
+    if (!h || now > h.reset) { hits.set(ip, { n: 1, reset: now + windowMs }); return next(); }
+    if (++h.n > max) return res.status(429).json({ error: 'muitas requisições' });
+    next();
+  };
 }
 
-engineRouter.use(checkRateLimit);
+export function mountEngineRoutes(app: Express) {
+  const path = process.env.STOCKFISH_PATH || '/usr/local/bin/stockfish';
+  const pool = new EnginePool({
+    path,
+    size: Number(process.env.ENGINE_POOL || 1),
+    hashMb: Number(process.env.ENGINE_HASH_MB || 64),
+  });
+  pool.ready().then(
+    () => console.log(`[engine] pronto (${pool.size} processo(s)) -> ${path}`),
+    (e) => console.error('[engine] falha ao iniciar:', e.message),
+  );
 
-// GET /api/engine/health
-engineRouter.get('/health', (_req, res) => {
-  const status = enginePool.getStatus();
-  res.json(status);
-});
+  app.get('/api/engine/health', (_req, res) => {
+    res.json({ ok: true, pool: pool.size, queued: pool.queued });
+  });
 
-// POST /api/engine/search
-engineRouter.post('/search', async (req, res) => {
-  try {
-    const { fen, movetime, depth, multiPV, skill, elo } = req.body;
-
-    if (!fen || typeof fen !== 'string') {
-      return res.status(400).json({ error: 'Parâmetro fen é obrigatório e deve ser uma string.' });
-    }
-
+  app.post('/api/engine/search', rateLimit(Number(process.env.ENGINE_RATE || 20)), async (req, res) => {
     try {
-      const testChess = new Chess(fen);
-      if (testChess.isGameOver()) {
-        return res.status(400).json({ error: 'A partida indicada pela FEN já está encerrada.' });
+      const { fen, movetime, depth, multiPV, skill, elo } = req.body ?? {};
+      if (typeof fen !== 'string' || fen.length > 120) return res.status(400).json({ error: 'fen obrigatória' });
+      const out = await pool.search({ fen, movetime, depth, multiPV, skill, elo });
+      res.json(out);
+    } catch (e: any) {
+      const msg = String(e?.message || e);
+      const code = msg === 'fila cheia' ? 503 : msg.includes('FEN') || msg.includes('partida') ? 400 : 500;
+      res.status(code).json({ error: msg });
+    }
+  });
+
+  app.post('/api/engine/analyze-move', rateLimit(Number(process.env.ENGINE_RATE || 20)), async (req, res) => {
+    try {
+      const { fen, move, depth, movetime } = req.body ?? {};
+      if (typeof fen !== 'string' || fen.length > 120 || typeof move !== 'string' || move.length > 10) {
+        return res.status(400).json({ error: 'fen e move são obrigatórios' });
       }
-    } catch {
-      return res.status(400).json({ error: 'FEN inválida fornecida.' });
+      const d = depth ? Math.min(20, Math.max(1, Number(depth))) : undefined;
+      res.json(await pool.analyzeMove(fen, move, { depth: d, movetime }));
+    } catch (e: any) {
+      const msg = String(e?.message || e);
+      const code = msg === 'fila cheia' ? 503 : msg.includes('ilegal') || msg.includes('FEN') ? 400 : 500;
+      res.status(code).json({ error: msg });
     }
+  });
 
-    const result = await enginePool.search({
-      fen,
-      movetime: movetime ? Number(movetime) : undefined,
-      depth: depth ? Number(depth) : undefined,
-      multiPV: multiPV ? Number(multiPV) : 1,
-      skill: skill !== undefined ? Number(skill) : undefined,
-      elo: elo ? Number(elo) : undefined,
-    });
-
-    return res.json(result);
-  } catch (err: any) {
-    console.error('[Engine API Search Error]:', err);
-    return res.status(err.message?.includes('overloaded') ? 503 : 500).json({
-      error: err.message || 'Erro interno no motor Stockfish',
-    });
-  }
-});
-
-// POST /api/engine/analyze-move
-engineRouter.post('/analyze-move', async (req, res) => {
-  try {
-    const { fen, move, depth } = req.body;
-
-    if (!fen || !move) {
-      return res.status(400).json({ error: 'Parâmetros fen e move são obrigatórios.' });
-    }
-
-    try {
-      new Chess(fen);
-    } catch {
-      return res.status(400).json({ error: 'FEN inválida fornecida.' });
-    }
-
-    const result = await enginePool.analyzeMove(fen, move, depth ? Number(depth) : 10);
-    return res.json(result);
-  } catch (err: any) {
-    console.error('[Engine API Analyze Error]:', err);
-    return res.status(500).json({
-      error: err.message || 'Erro ao analisar lance com motor Stockfish',
-    });
-  }
-});
+  return pool;
+}

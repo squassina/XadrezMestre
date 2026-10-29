@@ -588,3 +588,8 @@ export function getBotMove(chess: Chess, botLevel: BotLevel): Move | null {
   const { move } = findBestMove(chess, config.depth);
   return move || moves[0];
 }
+
+// usado por search.ts (motor interno de reserva)
+export const PST: Record<PieceSymbol, number[]> = {
+  p: PAWN_TABLE, n: KNIGHT_TABLE, b: BISHOP_TABLE, r: ROOK_TABLE, q: QUEEN_TABLE, k: KING_TABLE,
+};

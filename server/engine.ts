@@ -1,429 +1,293 @@
-import { spawn, ChildProcessWithoutNullStreams } from 'child_process';
+// server/engine.ts — pool de processos Stockfish NATIVO (UCI via stdin/stdout)
+import { spawn, ChildProcessWithoutNullStreams } from 'node:child_process';
+import { createInterface } from 'node:readline';
 import { Chess } from 'chess.js';
-import fs from 'fs';
 
-export interface SearchOptions {
-  fen: string;
-  movetime?: number;
-  depth?: number;
-  multiPV?: number;
-  skill?: number;
-  elo?: number;
-}
-
-export interface SearchLine {
+export interface EngineLine {
   multipv: number;
   depth: number;
-  cp?: number;
-  mate?: number;
-  pv: string[];
+  cp?: number;   // centipawns do ponto de vista de QUEM JOGA
+  mate?: number; // mate em N (negativo = quem joga leva mate)
+  pv: string[];  // lances UCI
 }
 
-export interface SearchResult {
-  bestMove: string;
-  san?: string;
-  lines: SearchLine[];
+export interface SearchRequest {
+  fen: string;
+  movetime?: number; // ms
+  depth?: number;
+  multiPV?: number;
+  skill?: number;    // 0..20
+  elo?: number;      // 1320..3190 (UCI_LimitStrength)
+}
+
+export interface SearchResponse {
+  bestMove: string;       // UCI (e2e4)
+  san: string | null;     // mesmo lance em SAN
+  lines: EngineLine[];
   engine: string;
   ms: number;
 }
 
-export interface AnalyzeResult {
+const INFO_RE = /^info .*?depth (\d+)(?: .*?multipv (\d+))? .*?score (cp|mate) (-?\d+).*? pv (.+)$/;
+
+class UciProcess {
+  private proc!: ChildProcessWithoutNullStreams;
+  private listeners = new Set<(line: string) => void>();
+  name = 'Stockfish';
+  ready!: Promise<void>;
+
+  constructor(private path: string, private hashMb: number) {
+    this.start();
+  }
+
+  private start() {
+    this.proc = spawn(this.path, [], { stdio: ['pipe', 'pipe', 'pipe'] });
+    createInterface({ input: this.proc.stdout }).on('line', (l) => {
+      this.listeners.forEach((f) => f(l));
+    });
+    this.proc.on('error', (e) => console.error('[engine] erro no processo:', e.message));
+    this.ready = this.init();
+  }
+
+  send(cmd: string) {
+    this.proc.stdin.write(cmd + '\n');
+  }
+
+  waitFor(pred: (l: string) => boolean, timeoutMs: number): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.listeners.delete(fn);
+        reject(new Error('timeout do motor'));
+      }, timeoutMs);
+      const fn = (l: string) => {
+        if (pred(l)) {
+          clearTimeout(timer);
+          this.listeners.delete(fn);
+          resolve(l);
+        }
+      };
+      this.listeners.add(fn);
+    });
+  }
+
+  on(fn: (l: string) => void) { this.listeners.add(fn); return () => this.listeners.delete(fn); }
+
+  private async init() {
+    const idLines: string[] = [];
+    const off = this.on((l) => l.startsWith('id name ') && idLines.push(l.slice(8)));
+    this.send('uci');
+    await this.waitFor((l) => l === 'uciok', 10_000);
+    off();
+    if (idLines[0]) this.name = idLines[0];
+    this.send(`setoption name Hash value ${this.hashMb}`);
+    this.send('setoption name Threads value 1');
+    this.send('isready');
+    await this.waitFor((l) => l === 'readyok', 10_000);
+  }
+
+  /** mata e recria o processo (usado após timeout/erro) */
+  restart() {
+    this.listeners.clear();
+    this.proc.removeAllListeners();
+    this.proc.kill('SIGKILL');
+    this.start();
+  }
+
+  close() {
+    this.proc.kill('SIGKILL');
+  }
+}
+
+export class EnginePool {
+  private workers: UciProcess[] = [];
+  private idle: UciProcess[] = [];
+  private queue: Array<() => void> = [];
+  readonly maxQueue: number;
+
+  constructor(opts: { path: string; size?: number; hashMb?: number; maxQueue?: number }) {
+    const size = Math.max(1, opts.size ?? 1);
+    this.maxQueue = opts.maxQueue ?? 50;
+    for (let i = 0; i < size; i++) {
+      const w = new UciProcess(opts.path, opts.hashMb ?? 64);
+      this.workers.push(w);
+      this.idle.push(w);
+    }
+  }
+
+  get size() { return this.workers.length; }
+  get queued() { return this.queue.length; }
+
+  async ready() { await Promise.all(this.workers.map((w) => w.ready)); }
+
+  private acquire(): Promise<UciProcess> {
+    const w = this.idle.pop();
+    if (w) return Promise.resolve(w);
+    if (this.queue.length >= this.maxQueue) return Promise.reject(new Error('fila cheia'));
+    return new Promise((resolve) => this.queue.push(() => resolve(this.idle.pop()!)));
+  }
+
+  private release(w: UciProcess) {
+    this.idle.push(w);
+    const next = this.queue.shift();
+    if (next) next();
+  }
+
+  async search(req: SearchRequest): Promise<SearchResponse> {
+    // ---- validação e limites (nunca confie no cliente) ----
+    let chess: Chess;
+    try { chess = new Chess(req.fen); } catch { throw new Error('FEN inválida'); }
+    if (chess.isGameOver()) throw new Error('partida já terminou');
+
+    const movetime = req.depth ? undefined : clamp(req.movetime ?? 500, 50, 5000);
+    const depth = req.depth ? clamp(req.depth, 1, 30) : undefined;
+    const multiPV = clamp(req.multiPV ?? 1, 1, 5);
+    const elo = req.elo ? clamp(req.elo, 1320, 3190) : undefined;
+    const skill = clamp(req.skill ?? 20, 0, 20);
+
+    const w = await this.acquire();
+    const t0 = Date.now();
+    try {
+      await w.ready;
+      const lines = new Map<number, EngineLine>();
+      const off = w.on((l) => {
+        const m = INFO_RE.exec(l);
+        if (!m) return;
+        const mp = m[2] ? Number(m[2]) : 1;
+        const v = Number(m[4]);
+        lines.set(mp, {
+          multipv: mp,
+          depth: Number(m[1]),
+          cp: m[3] === 'cp' ? v : undefined,
+          mate: m[3] === 'mate' ? v : undefined,
+          pv: m[5].trim().split(' '),
+        });
+      });
+
+      w.send('ucinewgame');
+      w.send(`setoption name MultiPV value ${multiPV}`);
+      if (elo) {
+        w.send('setoption name UCI_LimitStrength value true');
+        w.send(`setoption name UCI_Elo value ${elo}`);
+      } else {
+        w.send('setoption name UCI_LimitStrength value false');
+        w.send(`setoption name Skill Level value ${skill}`);
+      }
+      w.send('isready');
+      await w.waitFor((l) => l === 'readyok', 5_000);
+      w.send(`position fen ${req.fen}`);
+      w.send(depth ? `go depth ${depth}` : `go movetime ${movetime}`);
+
+      const best = await w.waitFor((l) => l.startsWith('bestmove'), (movetime ?? 15_000) + 5_000);
+      off();
+
+      const uci = best.split(' ')[1];
+      let san: string | null = null;
+      try {
+        const mv = chess.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] });
+        san = mv.san;
+      } catch { /* lance ilegal vindo do motor: não deveria ocorrer */ }
+
+      return {
+        bestMove: uci,
+        san,
+        lines: [...lines.values()].sort((a, b) => a.multipv - b.multipv),
+        engine: w.name,
+        ms: Date.now() - t0,
+      };
+    } catch (e) {
+      w.restart(); // processo em estado desconhecido
+      throw e;
+    } finally {
+      this.release(w);
+    }
+  }
+
+  /**
+   * Analisa UM lance: compara o melhor lance do motor com o lance jogado,
+   * na MESMA profundidade, em chance de vitória (0..100).
+   */
+  async analyzeMove(fen: string, move: string, opts: { depth?: number; movetime?: number } = {}): Promise<MoveAnalysis> {
+    const chess = new Chess(fen);
+    let played;
+    try {
+      // aceita UCI (e2e4) ou SAN (e4)
+      played = /^[a-h][1-8][a-h][1-8][qrbn]?$/.test(move)
+        ? chess.move({ from: move.slice(0, 2), to: move.slice(2, 4), promotion: move[4] })
+        : chess.move(move);
+    } catch { throw new Error('lance ilegal'); }
+    const playedUci = played.from + played.to + (played.promotion ?? '');
+    const after = chess.fen();
+    const mover = new Chess(fen).turn();
+
+    const before = await this.search({ fen, ...opts, multiPV: 1 });
+    const bestLine = before.lines[0];
+    const cpBefore = lineToCp(bestLine); // do ponto de vista de quem joga
+
+    let cpAfter: number;
+    if (playedUci === before.bestMove) {
+      cpAfter = cpBefore; // jogou o melhor lance: não precisa buscar de novo
+    } else if (chess.isCheckmate()) {
+      cpAfter = MATE_CP;
+    } else if (chess.isGameOver()) {
+      cpAfter = 0; // empate/afogamento
+    } else {
+      const a = await this.search({ fen: after, ...opts, multiPV: 1 });
+      cpAfter = -lineToCp(a.lines[0]); // inverte: a busca vem do ponto de vista do adversário
+    }
+
+    const lossPct = Math.max(0, winPct(cpBefore) - winPct(cpAfter));
+    const quality =
+      playedUci === before.bestMove ? 'best'
+      : lossPct >= 15 ? 'blunder'
+      : lossPct >= 10 ? 'mistake'
+      : lossPct >= 5 ? 'inaccuracy'
+      : lossPct >= 2 ? 'good'
+      : 'excellent';
+
+    // placares das BRANCAS (a barra de avaliação usa esse lado)
+    const sign = mover === 'w' ? 1 : -1;
+    return {
+      bestMove: before.bestMove,
+      bestSan: before.san,
+      playedSan: played.san,
+      cpBefore: sign * cpBefore,
+      cpAfter: sign * cpAfter,
+      lossPct: Math.round(lossPct * 10) / 10,
+      quality,
+      pv: bestLine?.pv ?? [],
+      engine: before.engine,
+    };
+  }
+
+  close() { this.workers.forEach((w) => w.close()); }
+}
+
+export interface MoveAnalysis {
   bestMove: string;
-  bestSan?: string;
+  bestSan: string | null;
   playedSan: string;
-  cpBefore: number;
+  cpBefore: number;   // centipawns, ponto de vista das brancas
   cpAfter: number;
-  lossPct: number;
-  quality: 'best' | 'good' | 'inaccuracy' | 'mistake' | 'blunder';
+  lossPct: number;    // pontos percentuais de chance de vitória perdidos
+  quality: 'best' | 'excellent' | 'good' | 'inaccuracy' | 'mistake' | 'blunder';
   pv: string[];
   engine: string;
 }
 
-interface QueuedTask {
-  commands: string[];
-  onLine: (line: string) => boolean; // return true when task is finished
-  resolve: (res: any) => void;
-  reject: (err: any) => void;
-  timeoutMs: number;
+const MATE_CP = 10_000;
+
+/** cp de quem joga; mate vira valor grande (mais rápido = maior) */
+export function lineToCp(l?: EngineLine): number {
+  if (!l) return 0;
+  if (l.mate !== undefined) return Math.sign(l.mate) * (MATE_CP - Math.abs(l.mate));
+  return l.cp ?? 0;
 }
 
-function findStockfishPath(): string {
-  if (process.env.STOCKFISH_PATH && fs.existsSync(process.env.STOCKFISH_PATH)) {
-    return process.env.STOCKFISH_PATH;
-  }
-  const candidates = [
-    '/usr/games/stockfish',
-    '/usr/bin/stockfish',
-    '/usr/local/bin/stockfish',
-    'stockfish'
-  ];
-  for (const p of candidates) {
-    if (p.startsWith('/') && fs.existsSync(p)) {
-      return p;
-    }
-  }
-  return 'stockfish';
+/** Curva de chance de vitória (Lichess). cp -> 0..100 */
+export const winPct = (cp: number) => 50 + 50 * (2 / (1 + Math.exp(-0.00368208 * cp)) - 1);
+
+function clamp(n: number, lo: number, hi: number) {
+  n = Number(n);
+  if (!Number.isFinite(n)) return lo;
+  return Math.min(hi, Math.max(lo, Math.round(n)));
 }
-
-export class EnginePool {
-  private sfPath: string;
-  private process: ChildProcessWithoutNullStreams | null = null;
-  private queue: QueuedTask[] = [];
-  private currentTask: QueuedTask | null = null;
-  private currentTimer: NodeJS.Timeout | null = null;
-  private isReady = false;
-  private isDestroyed = false;
-  private engineName = 'Stockfish';
-
-  constructor(sfPath?: string) {
-    this.sfPath = sfPath || findStockfishPath();
-    this.initProcess();
-  }
-
-  private initProcess() {
-    if (this.isDestroyed) return;
-    try {
-      this.process = spawn(this.sfPath);
-      this.process.stdout.setEncoding('utf-8');
-
-      let buffer = '';
-      this.process.stdout.on('data', (data: string) => {
-        buffer += data;
-        const lines = buffer.split('\n');
-        buffer = lines.pop() ?? '';
-        for (const line of lines) {
-          this.handleLine(line.trim());
-        }
-      });
-
-      this.process.stderr.on('data', (data: Buffer) => {
-        console.error('[Stockfish stderr]:', data.toString());
-      });
-
-      this.process.on('close', (code: number) => {
-        console.warn(`[Stockfish] process exited with code ${code}`);
-        this.process = null;
-        this.isReady = false;
-        if (!this.isDestroyed) {
-          // Restart on unexpected crash
-          setTimeout(() => this.initProcess(), 500);
-        }
-      });
-
-      // Send initial UCI setup
-      this.sendCommand('uci');
-      this.sendCommand('isready');
-      this.isReady = true;
-    } catch (err) {
-      console.error('[Stockfish] Failed to spawn process:', err);
-    }
-  }
-
-  private sendCommand(cmd: string) {
-    if (this.process && this.process.stdin.writable) {
-      this.process.stdin.write(`${cmd}\n`);
-    }
-  }
-
-  private handleLine(line: string) {
-    if (!line) return;
-    if (line.startsWith('id name ')) {
-      this.engineName = line.replace('id name ', '').trim();
-    }
-
-    if (this.currentTask) {
-      try {
-        const isDone = this.currentTask.onLine(line);
-        if (isDone) {
-          this.finishCurrentTask();
-        }
-      } catch (err) {
-        if (this.currentTask) {
-          this.currentTask.reject(err);
-          this.finishCurrentTask();
-        }
-      }
-    }
-  }
-
-  private finishCurrentTask(success: boolean = true) {
-    if (this.currentTimer) {
-      clearTimeout(this.currentTimer);
-      this.currentTimer = null;
-    }
-    const task = this.currentTask;
-    this.currentTask = null;
-    if (success && task) {
-      task.resolve(undefined);
-    }
-    this.processNext();
-  }
-
-  private processNext() {
-    if (this.currentTask || this.queue.length === 0 || !this.process) return;
-
-    this.currentTask = this.queue.shift()!;
-    this.currentTimer = setTimeout(() => {
-      if (this.currentTask) {
-        const task = this.currentTask;
-        this.sendCommand('stop');
-        this.finishCurrentTask(false);
-        task.reject(new Error('Stockfish execution timeout'));
-      }
-    }, this.currentTask.timeoutMs);
-
-    for (const cmd of this.currentTask.commands) {
-      this.sendCommand(cmd);
-    }
-  }
-
-  private enqueueTask<T>(commands: string[], onLine: (line: string) => boolean, timeoutMs: number = 8000): Promise<T> {
-    return new Promise<T>((resolve, reject) => {
-      if (this.queue.length >= 50) {
-        return reject(new Error('Engine queue overloaded (503)'));
-      }
-      this.queue.push({
-        commands,
-        onLine,
-        resolve,
-        reject,
-        timeoutMs,
-      });
-      this.processNext();
-    });
-  }
-
-  /**
-   * Search position for best move and evaluations
-   */
-  async search(opts: SearchOptions): Promise<SearchResult> {
-    const startTime = Date.now();
-    const chess = new Chess(opts.fen);
-    const turn = chess.turn();
-
-    const commands: string[] = [
-      'ucinewgame',
-      'isready',
-    ];
-
-    if (opts.skill !== undefined) {
-      commands.push(`setoption name Skill Level value ${Math.max(0, Math.min(20, opts.skill))}`);
-    }
-    if (opts.elo !== undefined && opts.elo >= 1320) {
-      commands.push(`setoption name UCI_LimitStrength value true`);
-      commands.push(`setoption name UCI_Elo value ${Math.min(2850, Math.max(1350, opts.elo))}`);
-    } else {
-      commands.push(`setoption name UCI_LimitStrength value false`);
-    }
-
-    const multiPV = Math.max(1, Math.min(5, opts.multiPV || 1));
-    commands.push(`setoption name MultiPV value ${multiPV}`);
-    commands.push(`position fen ${opts.fen}`);
-
-    let goCmd = 'go';
-    if (opts.movetime) {
-      goCmd += ` movetime ${Math.min(5000, Math.max(50, opts.movetime))}`;
-    } else if (opts.depth) {
-      goCmd += ` depth ${Math.min(25, Math.max(1, opts.depth))}`;
-    } else {
-      goCmd += ` movetime 400`;
-    }
-    commands.push(goCmd);
-
-    const lines: SearchLine[] = [];
-    let bestMove = '';
-
-    await this.enqueueTask<void>(
-      commands,
-      (line) => {
-        if (line.startsWith('info ') && line.includes(' score ')) {
-          const multipvMatch = line.match(/multipv (\d+)/);
-          const depthMatch = line.match(/depth (\d+)/);
-          const cpMatch = line.match(/score cp (-?\d+)/);
-          const mateMatch = line.match(/score mate (-?\d+)/);
-          const pvMatch = line.match(/ pv (.+)/);
-
-          const mpv = multipvMatch ? parseInt(multipvMatch[1], 10) : 1;
-          const depth = depthMatch ? parseInt(depthMatch[1], 10) : 1;
-          const pv = pvMatch ? pvMatch[1].trim().split(/\s+/) : [];
-
-          // Stockfish score is from the active player's perspective
-          let cp = cpMatch ? parseInt(cpMatch[1], 10) : undefined;
-          let mate = mateMatch ? parseInt(mateMatch[1], 10) : undefined;
-
-          // Normalize score to White's perspective (+ white ahead, - black ahead)
-          if (turn === 'b') {
-            if (cp !== undefined) cp = -cp;
-            if (mate !== undefined) mate = -mate;
-          }
-
-          const existingIdx = lines.findIndex((l) => l.multipv === mpv);
-          const parsedLine: SearchLine = {
-            multipv: mpv,
-            depth,
-            cp,
-            mate,
-            pv,
-          };
-          if (existingIdx >= 0) {
-            lines[existingIdx] = parsedLine;
-          } else {
-            lines.push(parsedLine);
-          }
-        }
-
-        if (line.startsWith('bestmove ')) {
-          const parts = line.split(' ');
-          bestMove = parts[1];
-          return true; // task complete
-        }
-        return false;
-      },
-      (opts.movetime || 400) + 4000
-    );
-
-    lines.sort((a, b) => a.multipv - b.multipv);
-
-    // Compute SAN for best move
-    let san: string | undefined;
-    try {
-      const from = bestMove.slice(0, 2);
-      const to = bestMove.slice(2, 4);
-      const promotion = bestMove.length > 4 ? bestMove.slice(4, 5) : undefined;
-      const m = chess.move({ from, to, promotion });
-      if (m) san = m.san;
-    } catch {
-      // ignore
-    }
-
-    return {
-      bestMove,
-      san,
-      lines,
-      engine: this.engineName,
-      ms: Date.now() - startTime,
-    };
-  }
-
-  /**
-   * Lichess Win Probability formula:
-   * winChance(cp) = 50 + 50 * (2 / (1 + exp(-0.00368208 * cp)) - 1)
-   */
-  static winChance(cp: number): number {
-    return 50 + 50 * (2 / (1 + Math.exp(-0.00368208 * cp)) - 1);
-  }
-
-  /**
-   * Analyze played move against engine evaluation
-   */
-  async analyzeMove(fenBefore: string, playedMoveInput: string, depth: number = 10): Promise<AnalyzeResult> {
-    const chessBefore = new Chess(fenBefore);
-    const turn = chessBefore.turn();
-
-    // Convert move input to SAN & UCI
-    let playedMoveObj = chessBefore.moves({ verbose: true }).find(
-      (m) => m.san === playedMoveInput || `${m.from}${m.to}${m.promotion || ''}` === playedMoveInput
-    );
-    if (!playedMoveObj) {
-      throw new Error(`Lance inválido para a posição: ${playedMoveInput}`);
-    }
-
-    const playedSan = playedMoveObj.san;
-    const playedUci = `${playedMoveObj.from}${playedMoveObj.to}${playedMoveObj.promotion || ''}`;
-
-    // 1. Search best move before
-    const searchBefore = await this.search({
-      fen: fenBefore,
-      depth: Math.min(14, depth),
-      multiPV: 1,
-    });
-
-    const bestMove = searchBefore.bestMove;
-    const bestSan = searchBefore.san;
-    const topPv = searchBefore.lines[0]?.pv || [];
-
-    // Eval before from White's perspective
-    let cpBefore = 0;
-    if (searchBefore.lines[0]?.mate !== undefined) {
-      cpBefore = searchBefore.lines[0].mate > 0 ? 10000 : -10000;
-    } else if (searchBefore.lines[0]?.cp !== undefined) {
-      cpBefore = searchBefore.lines[0].cp;
-    }
-
-    // 2. Play move to get fenAfter
-    const chessAfter = new Chess(fenBefore);
-    chessAfter.move(playedMoveObj);
-    const fenAfter = chessAfter.fen();
-
-    let cpAfter = cpBefore;
-    if (chessAfter.isCheckmate()) {
-      cpAfter = turn === 'w' ? 10000 : -10000;
-    } else if (chessAfter.isDraw()) {
-      cpAfter = 0;
-    } else {
-      const searchAfter = await this.search({
-        fen: fenAfter,
-        depth: Math.min(14, depth),
-        multiPV: 1,
-      });
-      if (searchAfter.lines[0]?.mate !== undefined) {
-        cpAfter = searchAfter.lines[0].mate > 0 ? 10000 : -10000;
-      } else if (searchAfter.lines[0]?.cp !== undefined) {
-        cpAfter = searchAfter.lines[0].cp;
-      }
-    }
-
-    // Win Chance loss calculation (from player perspective)
-    const winBefore = EnginePool.winChance(turn === 'w' ? cpBefore : -cpBefore);
-    const winAfter = EnginePool.winChance(turn === 'w' ? cpAfter : -cpAfter);
-    const lossPct = Math.max(0, winBefore - winAfter);
-
-    let quality: 'best' | 'good' | 'inaccuracy' | 'mistake' | 'blunder';
-    if (playedUci === bestMove || lossPct <= 1.5) {
-      quality = 'best';
-    } else if (lossPct <= 5.0) {
-      quality = 'good';
-    } else if (lossPct <= 12.0) {
-      quality = 'inaccuracy';
-    } else if (lossPct <= 22.0) {
-      quality = 'mistake';
-    } else {
-      quality = 'blunder';
-    }
-
-    return {
-      bestMove,
-      bestSan,
-      playedSan,
-      cpBefore,
-      cpAfter,
-      lossPct: Math.round(lossPct * 10) / 10,
-      quality,
-      pv: topPv,
-      engine: searchBefore.engine,
-    };
-  }
-
-  getStatus() {
-    return {
-      ok: !!this.process && this.isReady,
-      engine: this.engineName,
-      queued: this.queue.length,
-    };
-  }
-
-  destroy() {
-    this.isDestroyed = true;
-    if (this.currentTimer) clearTimeout(this.currentTimer);
-    if (this.process) {
-      this.sendCommand('quit');
-      setTimeout(() => {
-        try {
-          this.process?.kill('SIGKILL');
-        } catch {}
-      }, 500);
-    }
-  }
-}
-
-export const enginePool = new EnginePool();

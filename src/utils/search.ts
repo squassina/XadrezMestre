@@ -1,302 +1,154 @@
-import { Chess, Move } from 'chess.js';
+import { Chess, PieceSymbol, Square } from 'chess.js';
+import { PIECE_VALUES, PST } from './engine';
 
-// Standard piece values in centipawns
-export const PIECE_VALUES: Record<string, number> = {
-  p: 100,
-  n: 320,
-  b: 330,
-  r: 500,
-  q: 900,
-  k: 20000,
-};
+const MATE = 100000;
+const EXACT = 0, LOWER = 1, UPPER = 2;
+type TTEntry = { depth: number; score: number; flag: number; move?: string };
 
-// Piece Square Tables (from White's perspective)
-const PAWN_TABLE = [
-   0,  0,  0,  0,  0,  0,  0,  0,
-  50, 50, 50, 50, 50, 50, 50, 50,
-  10, 10, 20, 30, 30, 20, 10, 10,
-   5,  5, 10, 25, 25, 10,  5,  5,
-   0,  0,  0, 20, 20,  0,  0,  0,
-   5, -5,-10,  0,  0,-10, -5,  5,
-   5, 10, 10,-20,-20, 10, 10,  5,
-   0,  0,  0,  0,  0,  0,  0,  0
-];
+const tt = new Map<string, TTEntry>();
+const killers: Array<[string?, string?]> = [];
+let nodes = 0;
+let deadline = 0;
+let stopped = false;
 
-const KNIGHT_TABLE = [
-  -50,-40,-30,-30,-30,-30,-40,-50,
-  -40,-20,  0,  0,  0,  0,-20,-40,
-  -30,  0, 10, 15, 15, 10,  0,-30,
-  -30,  5, 15, 20, 20, 15,  5,-30,
-  -30,  0, 15, 20, 20, 15,  0,-30,
-  -30,  5, 10, 15, 15, 10,  5,-30,
-  -40,-20,  0,  5,  5,  0,-20,-40,
-  -50,-40,-30,-30,-30,-30,-40,-50,
-];
-
-const BISHOP_TABLE = [
-  -20,-10,-10,-10,-10,-10,-10,-20,
-  -10,  0,  0,  0,  0,  0,  0,-10,
-  -10,  0,  5, 10, 10,  5,  0,-10,
-  -10,  5,  5, 10, 10,  5,  5,-10,
-  -10,  0, 10, 10, 10, 10,  0,-10,
-  -10, 10, 10, 10, 10, 10, 10,-10,
-  -10,  5,  0,  0,  0,  0,  5,-10,
-  -20,-10,-10,-10,-10,-10,-10,-20,
-];
-
-const ROOK_TABLE = [
-   0,  0,  0,  0,  0,  0,  0,  0,
-   5, 10, 10, 10, 10, 10, 10,  5,
-  -5,  0,  0,  0,  0,  0,  0, -5,
-  -5,  0,  0,  0,  0,  0,  0, -5,
-  -5,  0,  0,  0,  0,  0,  0, -5,
-  -5,  0,  0,  0,  0,  0,  0, -5,
-  -5,  0,  0,  0,  0,  0,  0, -5,
-   0,  0,  0,  5,  5,  0,  0,  0
-];
-
-const QUEEN_TABLE = [
-  -20,-10,-10, -5, -5,-10,-10,-20,
-  -10,  0,  0,  0,  0,  0,  0,-10,
-  -10,  0,  5,  5,  5,  5,  0,-10,
-   -5,  0,  5,  5,  5,  5,  0, -5,
-    0,  0,  5,  5,  5,  5,  0, -5,
-  -10,  5,  5,  5,  5,  5,  0,-10,
-  -10,  0,  5,  0,  0,  0,  0,-10,
-  -20,-10,-10, -5, -5,-10,-10,-20
-];
-
-const KING_TABLE = [
-  -30,-40,-40,-50,-50,-40,-40,-30,
-  -30,-40,-40,-50,-50,-40,-40,-30,
-  -30,-40,-40,-50,-50,-40,-40,-30,
-  -30,-40,-40,-50,-50,-40,-40,-30,
-  -20,-30,-30,-40,-40,-30,-30,-20,
-  -10,-20,-20,-20,-20,-20,-20,-10,
-   20, 20,  0,  0,  0,  0, 20, 20,
-   20, 30, 10,  0,  0, 10, 30, 20
-];
-
-const CHECKMATE_SCORE = 100000;
-
-export function evaluatePosition(chess: Chess, ply: number = 0): number {
-  if (chess.isCheckmate()) {
-    // Distance-aware checkmate: closer checkmate is better
-    return chess.turn() === 'w' ? -(CHECKMATE_SCORE - ply) : (CHECKMATE_SCORE - ply);
-  }
-  if (chess.isDraw() || chess.isStalemate() || chess.isThreefoldRepetition() || chess.isInsufficientMaterial()) {
-    return 0;
-  }
-
-  let score = 0;
+// Avaliação do ponto de vista de quem joga (negamax precisa disso)
+function evalStm(chess: Chess): number {
   const board = chess.board();
-
+  let s = 0;
   for (let r = 0; r < 8; r++) {
-    const row = board[r];
     for (let c = 0; c < 8; c++) {
-      const piece = row[c];
-      if (!piece) continue;
-
-      const idx = piece.color === 'w' ? r * 8 + c : (7 - r) * 8 + c;
-      let pstVal = 0;
-
-      switch (piece.type) {
-        case 'p': pstVal = PAWN_TABLE[idx]; break;
-        case 'n': pstVal = KNIGHT_TABLE[idx]; break;
-        case 'b': pstVal = BISHOP_TABLE[idx]; break;
-        case 'r': pstVal = ROOK_TABLE[idx]; break;
-        case 'q': pstVal = QUEEN_TABLE[idx]; break;
-        case 'k': pstVal = KING_TABLE[idx]; break;
-      }
-
-      const totalVal = PIECE_VALUES[piece.type] + pstVal;
-      score += piece.color === 'w' ? totalVal : -totalVal;
+      const p = board[r][c];
+      if (!p) continue;
+      const idx = p.color === 'w' ? r * 8 + c : (7 - r) * 8 + c;
+      const v = PIECE_VALUES[p.type] + PST[p.type][idx];
+      s += p.color === 'w' ? v : -v;
     }
   }
-
-  if (chess.inCheck()) {
-    score += chess.turn() === 'w' ? -35 : 35;
-  }
-
-  return score;
+  return chess.turn() === 'w' ? s : -s;
 }
 
-/**
- * Quiescence search: avoids the horizon effect by continuing to search captures
- * until a quiet position is reached.
- */
-function quiescence(
-  chess: Chess,
-  alpha: number,
-  beta: number,
-  isWhite: boolean,
-  ply: number,
-  maxQDepth: number = 4
-): number {
-  const standPat = evaluatePosition(chess, ply);
+const key = (chess: Chess) => chess.fen().split(' ').slice(0, 4).join(' ');
 
-  if (ply >= maxQDepth) {
-    return standPat;
+const PIECE_OF: Record<string, PieceSymbol> = { N: 'n', B: 'b', R: 'r', Q: 'q', K: 'k' };
+
+// SAN (string) é ~25x mais rápido de gerar que moves({ verbose: true })
+function moveScore(chess: Chess, san: string, ttMove: string | undefined, ply: number): number {
+  if (san === ttMove) return 1_000_000;
+  let s = 0;
+  if (san.includes('x')) {
+    const m = san.match(/x([a-h][1-8])/);
+    const victim = m ? chess.get(m[1] as Square)?.type : undefined; // en passant: victim = peão
+    const attacker = PIECE_OF[san[0]] ?? 'p';
+    s += 10_000 + PIECE_VALUES[victim ?? 'p'] * 10 - PIECE_VALUES[attacker];
   }
-
-  if (isWhite) {
-    if (standPat >= beta) return beta;
-    if (standPat > alpha) alpha = standPat;
-
-    // Fast capture moves only
-    const captureMoves = chess.moves({ verbose: true }).filter((m) => m.captured || m.san.includes('+'));
-    // Sort captures by MVV-LVA
-    captureMoves.sort((a, b) => {
-      const aVal = (PIECE_VALUES[a.captured || 'p'] || 100) - (PIECE_VALUES[a.piece] || 100) / 10;
-      const bVal = (PIECE_VALUES[b.captured || 'p'] || 100) - (PIECE_VALUES[b.piece] || 100) / 10;
-      return bVal - aVal;
-    });
-
-    for (const move of captureMoves) {
-      chess.move(move);
-      const score = quiescence(chess, alpha, beta, false, ply + 1, maxQDepth);
-      chess.undo();
-
-      if (score >= beta) return beta;
-      if (score > alpha) alpha = score;
-    }
-    return alpha;
-  } else {
-    if (standPat <= alpha) return alpha;
-    if (standPat < beta) beta = standPat;
-
-    const captureMoves = chess.moves({ verbose: true }).filter((m) => m.captured || m.san.includes('+'));
-    captureMoves.sort((a, b) => {
-      const aVal = (PIECE_VALUES[a.captured || 'p'] || 100) - (PIECE_VALUES[a.piece] || 100) / 10;
-      const bVal = (PIECE_VALUES[b.captured || 'p'] || 100) - (PIECE_VALUES[b.piece] || 100) / 10;
-      return bVal - aVal;
-    });
-
-    for (const move of captureMoves) {
-      chess.move(move);
-      const score = quiescence(chess, alpha, beta, true, ply + 1, maxQDepth);
-      chess.undo();
-
-      if (score <= alpha) return alpha;
-      if (score < beta) beta = score;
-    }
-    return beta;
-  }
+  if (san.includes('=')) s += 9_000;
+  if (killers[ply]?.includes(san)) s += 5_000;
+  if (san.endsWith('+') || san.endsWith('#')) s += 3_000;
+  return s;
 }
 
-/**
- * Minimax with Alpha-Beta Pruning and Quiescence Search
- */
-function minimaxAlphaBeta(
-  chess: Chess,
-  depth: number,
-  alpha: number,
-  beta: number,
-  isWhite: boolean,
-  ply: number
-): number {
-  if (depth <= 0) {
-    return quiescence(chess, alpha, beta, isWhite, ply);
-  }
-
-  if (chess.isGameOver()) {
-    return evaluatePosition(chess, ply);
-  }
-
-  const moves = chess.moves({ verbose: true });
-  if (moves.length === 0) {
-    return evaluatePosition(chess, ply);
-  }
-
-  // Move ordering: checks and high-value captures first
-  moves.sort((a, b) => {
-    let aWeight = 0;
-    let bWeight = 0;
-    if (a.captured) aWeight += (PIECE_VALUES[a.captured] || 100) * 10 - (PIECE_VALUES[a.piece] || 100);
-    if (b.captured) bWeight += (PIECE_VALUES[b.captured] || 100) * 10 - (PIECE_VALUES[b.piece] || 100);
-    if (a.san.includes('+') || a.san.includes('#')) aWeight += 70;
-    if (b.san.includes('+') || b.san.includes('#')) bWeight += 70;
-    return bWeight - aWeight;
-  });
-
-  if (isWhite) {
-    let maxEval = -Infinity;
-    for (const move of moves) {
-      chess.move(move);
-      const evalScore = minimaxAlphaBeta(chess, depth - 1, alpha, beta, false, ply + 1);
-      chess.undo();
-
-      maxEval = Math.max(maxEval, evalScore);
-      alpha = Math.max(alpha, evalScore);
-      if (beta <= alpha) break; // Beta cut-off
-    }
-    return maxEval;
-  } else {
-    let minEval = Infinity;
-    for (const move of moves) {
-      chess.move(move);
-      const evalScore = minimaxAlphaBeta(chess, depth - 1, alpha, beta, true, ply + 1);
-      chess.undo();
-
-      minEval = Math.min(minEval, evalScore);
-      beta = Math.min(beta, evalScore);
-      if (beta <= alpha) break; // Alpha cut-off
-    }
-    return minEval;
-  }
+function order(chess: Chess, moves: string[], ttMove: string | undefined, ply: number): string[] {
+  return moves
+    .map((m) => [moveScore(chess, m, ttMove, ply), m] as const)
+    .sort((a, b) => b[0] - a[0])
+    .map((x) => x[1]);
 }
 
-/**
- * Find best move using Quiescence Search and Alpha-Beta
- */
-export function findBestMoveWithQuiescence(
-  chess: Chess,
-  depth: number = 3
-): { move: Move | null; score: number } {
-  const isWhite = chess.turn() === 'w';
-  const moves = chess.moves({ verbose: true });
+function tick() {
+  if ((++nodes & 1023) === 0 && Date.now() > deadline) stopped = true;
+}
 
-  if (moves.length === 0) {
-    return { move: null, score: evaluatePosition(chess, 0) };
-  }
-
-  // Sort candidate moves
-  moves.sort((a, b) => {
-    let aScore = 0;
-    let bScore = 0;
-    if (a.captured) aScore += (PIECE_VALUES[a.captured] || 100) * 10 - (PIECE_VALUES[a.piece] || 100);
-    if (b.captured) bScore += (PIECE_VALUES[b.captured] || 100) * 10 - (PIECE_VALUES[b.piece] || 100);
-    if (a.san.includes('#')) aScore += 10000;
-    else if (a.san.includes('+')) aScore += 80;
-    if (b.san.includes('#')) bScore += 10000;
-    else if (b.san.includes('+')) bScore += 80;
-    return bScore - aScore;
-  });
-
-  let bestMove = moves[0];
-  let bestScore = isWhite ? -Infinity : Infinity;
-  let alpha = -Infinity;
-  let beta = Infinity;
-
-  for (const move of moves) {
-    chess.move(move);
-    const score = minimaxAlphaBeta(chess, depth - 1, alpha, beta, !isWhite, 1);
+function qsearch(chess: Chess, alpha: number, beta: number): number {
+  tick();
+  if (stopped) return 0;
+  const stand = evalStm(chess);
+  if (stand >= beta) return beta;
+  if (stand > alpha) alpha = stand;
+  const tactical = chess.moves().filter((m) => m.includes('x') || m.includes('='));
+  for (const m of order(chess, tactical, undefined, 0)) {
+    chess.move(m);
+    const sc = -qsearch(chess, -beta, -alpha);
     chess.undo();
+    if (stopped) return 0;
+    if (sc >= beta) return beta;
+    if (sc > alpha) alpha = sc;
+  }
+  return alpha;
+}
 
-    if (isWhite) {
-      if (score > bestScore) {
-        bestScore = score;
-        bestMove = move;
-      }
-      alpha = Math.max(alpha, score);
-    } else {
-      if (score < bestScore) {
-        bestScore = score;
-        bestMove = move;
-      }
-      beta = Math.min(beta, score);
+// Placar de mate depende da distância (ply) -> ajuste ao guardar/ler da TT
+const toTT = (s: number, ply: number) => (s > MATE - 1000 ? s + ply : s < -MATE + 1000 ? s - ply : s);
+const fromTT = (s: number, ply: number) => (s > MATE - 1000 ? s - ply : s < -MATE + 1000 ? s + ply : s);
+
+function negamax(chess: Chess, depth: number, alpha: number, beta: number, ply: number): number {
+  tick();
+  if (stopped) return 0;
+  if (ply > 0 && chess.isDraw()) return 0;
+
+  const inCheck = chess.inCheck();
+  if (inCheck) depth++; // extensão de xeque
+  if (depth <= 0) return qsearch(chess, alpha, beta);
+
+  const k = key(chess);
+  const e = tt.get(k);
+  if (e && e.depth >= depth && ply > 0) {
+    const s = fromTT(e.score, ply);
+    if (e.flag === EXACT) return s;
+    if (e.flag === LOWER && s >= beta) return s;
+    if (e.flag === UPPER && s <= alpha) return s;
+  }
+
+  const moves = chess.moves();
+  if (moves.length === 0) return inCheck ? -MATE + ply : 0;
+
+  const alpha0 = alpha;
+  let best = -Infinity;
+  let bestSan: string | undefined;
+
+  for (const m of order(chess, moves, e?.move, ply)) {
+    chess.move(m);
+    const sc = -negamax(chess, depth - 1, -beta, -alpha, ply + 1);
+    chess.undo();
+    if (stopped) return 0;
+    if (sc > best) { best = sc; bestSan = m; }
+    if (sc > alpha) alpha = sc;
+    if (alpha >= beta) {
+      if (!m.includes('x')) killers[ply] = [m, killers[ply]?.[0]];
+      break;
     }
   }
 
-  return { move: bestMove, score: bestScore };
+  const flag = best <= alpha0 ? UPPER : best >= beta ? LOWER : EXACT;
+  if (tt.size > 200_000) tt.clear();
+  tt.set(k, { depth, score: toTT(best, ply), flag, move: bestSan });
+  return best;
+}
+
+export interface SearchResult { san: string | null; score: number; depth: number; nodes: number }
+
+/** Aprofundamento iterativo com limite de tempo. score = centipawns do ponto de vista de QUEM JOGA. */
+export function searchBestMove(chess: Chess, maxDepth = 6, timeMs = 800): SearchResult {
+  nodes = 0; stopped = false; deadline = Date.now() + timeMs; killers.length = 0;
+  let rootMoves = chess.moves();
+  if (rootMoves.length === 0) return { san: null, score: 0, depth: 0, nodes: 0 };
+
+  let result: SearchResult = { san: rootMoves[0], score: 0, depth: 0, nodes: 0 };
+  for (let depth = 1; depth <= maxDepth; depth++) {
+    let alpha = -Infinity;
+    let bestMove = rootMoves[0];
+    let bestScore = -Infinity;
+    for (const m of rootMoves) {
+      chess.move(m);
+      const sc = -negamax(chess, depth - 1, -Infinity, -alpha, 1);
+      chess.undo();
+      if (stopped) break;
+      if (sc > bestScore) { bestScore = sc; bestMove = m; }
+      if (sc > alpha) alpha = sc;
+    }
+    if (stopped) break; // descarta iteração incompleta
+    result = { san: bestMove, score: bestScore, depth, nodes };
+    rootMoves = [bestMove, ...rootMoves.filter((m) => m !== bestMove)]; // melhor primeiro
+    if (Math.abs(bestScore) > MATE - 1000) break; // mate achado
+  }
+  return result;
 }

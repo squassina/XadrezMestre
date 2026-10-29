@@ -1,173 +1,76 @@
-import { Chess, Move } from 'chess.js';
-import { BotLevel } from '../types/chess';
-import { findBestMoveWithQuiescence } from './search';
+// src/utils/remoteEngine.ts — cliente do Stockfish nativo (servidor) com reserva local
+import { Chess } from 'chess.js';
+import { searchBestMove } from './search';
 
-export const API_BASE_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+// Em produção (GitHub Pages) defina VITE_API_URL=https://seu-servico.run.app  (sem barra no fim)
+const API = String((import.meta as any).env?.VITE_API_URL ?? (globalThis as any).process?.env?.VITE_API_URL ?? '').replace(/\/$/, '');
 
-export interface BotEngineConfig {
-  skill?: number;
-  elo?: number;
-  movetime?: number;
-  depth?: number;
-  blunderChance?: number;
+export interface EngineLine { multipv: number; depth: number; cp?: number; mate?: number; pv: string[] }
+export interface RemoteSearch { bestMove: string; san: string | null; lines: EngineLine[]; engine: string; ms: number }
+export interface MoveAnalysis {
+  bestMove: string; bestSan: string | null; playedSan: string;
+  cpBefore: number; cpAfter: number; lossPct: number;
+  quality: 'best' | 'excellent' | 'good' | 'inaccuracy' | 'mistake' | 'blunder';
+  pv: string[]; engine: string;
 }
 
-export const BOT_ENGINE: Record<BotLevel, BotEngineConfig> = {
-  beginner: { skill: 0, depth: 1, movetime: 120, blunderChance: 0.28 },
-  intermediate: { elo: 1400, movetime: 250, depth: 6, blunderChance: 0.10 },
-  advanced: { elo: 1800, movetime: 450, depth: 10, blunderChance: 0.02 },
-  master: { elo: 2300, movetime: 800, depth: 14, blunderChance: 0.0 },
+async function post<T>(path: string, body: unknown, timeoutMs: number, signal?: AbortSignal): Promise<T> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  signal?.addEventListener('abort', () => ctrl.abort());
+  try {
+    const res = await fetch(`${API}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: ctrl.signal,
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return (await res.json()) as T;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Acorda o servidor (Cloud Run pode estar com "partida a frio"). Chame ao abrir o app. */
+export function warmUp() {
+  fetch(`${API}/api/engine/health`).catch(() => undefined);
+}
+
+export interface BotSettings { movetime: number; skill?: number; elo?: number; depth?: number }
+
+/** Nível do bot -> parâmetros do Stockfish. UCI_Elo só existe de 1320 a 3190. */
+export const BOT_ENGINE: Record<'beginner' | 'intermediate' | 'advanced' | 'master', BotSettings> = {
+  beginner:     { movetime: 100,  skill: 0, depth: 1 },
+  intermediate: { movetime: 250,  elo: 1400 },
+  advanced:     { movetime: 400,  elo: 1800 },
+  master:       { movetime: 800,  elo: 2300 },
 };
 
-export interface RemoteSearchResult {
-  bestMove: string; // uci (e.g. e2e4)
-  san?: string;
-  lines: Array<{
-    multipv: number;
-    depth: number;
-    cp?: number;
-    mate?: number;
-    pv: string[];
-  }>;
-  engine: string;
-  ms: number;
-}
-
-export interface RemoteAnalyzeResult {
-  bestMove: string;
-  bestSan?: string;
-  playedSan: string;
-  cpBefore: number;
-  cpAfter: number;
-  lossPct: number;
-  quality: 'best' | 'good' | 'inaccuracy' | 'mistake' | 'blunder';
-  pv: string[];
-  engine: string;
-}
-
-/**
- * Ping backend to wake up cloud instances or engine processes
- */
-export async function warmUp(): Promise<void> {
-  try {
-    await fetch(`${API_BASE_URL}/api/engine/health`, {
-      method: 'GET',
-      headers: { 'Accept': 'application/json' },
-    });
-  } catch {
-    // Silent warm up catch
-  }
-}
-
-/**
- * Request move from Stockfish API with automatic seamless internal fallback
- */
+/** Melhor lance do bot. Se o servidor falhar/demorar, usa o motor interno (mais fraco). */
 export async function botMove(
-  fen: string,
-  config: BotEngineConfig,
-  signal?: AbortSignal
-): Promise<{ from: string; to: string; promotion?: string; source: 'stockfish' | 'interno'; san?: string }> {
-  const chess = new Chess(fen);
-  const legalMoves = chess.moves({ verbose: true });
-
-  if (legalMoves.length === 0) {
-    throw new Error('Sem lances legais disponíveis');
-  }
-
-  // Handle intentional beginner blunders if configured
-  if (config.blunderChance && Math.random() < config.blunderChance && legalMoves.length > 1) {
-    const randomMove = legalMoves[Math.floor(Math.random() * legalMoves.length)];
-    return {
-      from: randomMove.from,
-      to: randomMove.to,
-      promotion: randomMove.promotion,
-      san: randomMove.san,
-      source: 'interno',
-    };
-  }
-
-  // Try Remote Stockfish Engine
+  fen: string, s: BotSettings, signal?: AbortSignal,
+): Promise<{ from: string; to: string; promotion?: string; source: 'stockfish' | 'interno' }> {
   try {
-    const timeoutSignal = AbortSignal.timeout ? AbortSignal.timeout(config.movetime ? config.movetime + 3500 : 4000) : undefined;
-    const combinedSignal = signal || timeoutSignal;
-
-    const response = await fetch(`${API_BASE_URL}/api/engine/search`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        fen,
-        movetime: config.movetime,
-        depth: config.depth,
-        skill: config.skill,
-        elo: config.elo,
-      }),
-      signal: combinedSignal,
-    });
-
-    if (response.ok) {
-      const data: RemoteSearchResult = await response.json();
-      if (data.bestMove && data.bestMove.length >= 4) {
-        const from = data.bestMove.slice(0, 2);
-        const to = data.bestMove.slice(2, 4);
-        const promotion = data.bestMove.length > 4 ? data.bestMove.slice(4, 5) : undefined;
-
-        // Verify validity in chess.js
-        const matched = legalMoves.find(
-          (m) => m.from === from && m.to === to && (m.promotion ?? '') === (promotion ?? '')
-        );
-        if (matched) {
-          return { from, to, promotion, san: matched.san, source: 'stockfish' };
-        }
-      }
-    }
-  } catch {
-    // Engine API not reachable or timed out - fall through to internal search
+    const r = await post<RemoteSearch>('/api/engine/search', { fen, ...s }, 8000, signal);
+    return { from: r.bestMove.slice(0, 2), to: r.bestMove.slice(2, 4), promotion: r.bestMove[4], source: 'stockfish' };
+  } catch (e) {
+    if (signal?.aborted) throw e; // cancelado de propósito (nova partida / desfez lance)
+    const chess = new Chess(fen);
+    const r = searchBestMove(chess, 4, 600);
+    const mv = chess.moves({ verbose: true }).find((m) => m.san === r.san);
+    if (!mv) throw new Error('sem lances');
+    return { from: mv.from, to: mv.to, promotion: mv.promotion, source: 'interno' };
   }
-
-  // Fallback to internal search with quiescence
-  const fallbackDepth = config.depth ? Math.min(3, config.depth) : 2;
-  const bestResult = findBestMoveWithQuiescence(chess, fallbackDepth);
-  const chosenMove = bestResult.move || legalMoves[0];
-
-  return {
-    from: chosenMove.from,
-    to: chosenMove.to,
-    promotion: chosenMove.promotion,
-    san: chosenMove.san,
-    source: 'interno',
-  };
 }
 
-/**
- * Request move quality and evaluation from Stockfish API
- */
+/** Análise de um lance (coach). Sem reserva: se o servidor cair, devolve null e a UI esconde a análise. */
 export async function analyzeMoveRemote(
-  fenBefore: string,
-  playedSan: string,
-  depth: number = 10,
-  signal?: AbortSignal
-): Promise<RemoteAnalyzeResult | null> {
+  fen: string, move: string, depth = 12, signal?: AbortSignal,
+): Promise<MoveAnalysis | null> {
   try {
-    const timeoutSignal = AbortSignal.timeout ? AbortSignal.timeout(4500) : undefined;
-    const combinedSignal = signal || timeoutSignal;
-
-    const response = await fetch(`${API_BASE_URL}/api/engine/analyze-move`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        fen: fenBefore,
-        move: playedSan,
-        depth,
-      }),
-      signal: combinedSignal,
-    });
-
-    if (response.ok) {
-      return (await response.json()) as RemoteAnalyzeResult;
-    }
+    return await post<MoveAnalysis>('/api/engine/analyze-move', { fen, move, depth }, 15000, signal);
   } catch {
-    // Failed or offline
+    return null;
   }
-
-  return null;
 }
