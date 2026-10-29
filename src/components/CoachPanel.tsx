@@ -81,7 +81,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
         </div>
 
         <div className="text-xs font-mono text-slate-400">
-          Lance {currentMove.moveNumber}: <span className="font-bold text-slate-200">{currentMove.san}</span>
+          {t('Lance')} {currentMove.moveNumber}: <span className="font-bold text-slate-200">{currentMove.san}</span>
         </div>
       </div>
 
@@ -89,18 +89,18 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
       <div className="text-xs text-slate-300 leading-relaxed mb-3">
         {currentMove.coachFeedback ? (
           <div>
-            <p className="font-normal">{currentMove.coachFeedback.explanation}</p>
+            <p className="font-normal">{t(currentMove.coachFeedback.explanation)}</p>
             {currentMove.coachFeedback.proTip && (
               <div className="mt-2 p-2 rounded bg-slate-950/60 border border-slate-800/80 text-amber-200/90 flex items-start gap-1.5">
                 <Lightbulb className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
-                <span><strong className="text-amber-300">{t('Dica Prática:')}</strong> {currentMove.coachFeedback.proTip}</span>
+                <span><strong className="text-amber-300">{t('Dica Prática:')}</strong> {t(currentMove.coachFeedback.proTip)}</span>
               </div>
             )}
             {currentMove.coachFeedback.keyQuestionsToAsk && currentMove.coachFeedback.keyQuestionsToAsk.length > 0 && (
               <div className="mt-2 text-[11px] text-slate-400 flex items-start gap-1">
                 <HelpCircle className="w-3 h-3 text-sky-400 shrink-0 mt-0.5" />
                 <span>
-                  <strong>{t('Checklist Mental:')}</strong> {currentMove.coachFeedback.keyQuestionsToAsk.join(' · ')}
+                  <strong>{t('Checklist Mental:')}</strong> {currentMove.coachFeedback.keyQuestionsToAsk.map(t).join(' · ')}
                 </span>
               </div>
             )}
@@ -109,9 +109,9 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
           <div>
             {isCriticalError ? (
               <p>
-                O lance <span className="font-mono font-bold text-rose-300">{currentMove.san}</span> cedeu uma vantagem importante.
+                {t('O lance')} <span className="font-mono font-bold text-rose-300">{currentMove.san}</span> {t('cede uma vantagem importante.')}
                 {currentMove.bestMoveSan && (
-                  <> O motor calculou que <span className="font-mono font-bold text-emerald-400">{currentMove.bestMoveSan}</span> era a melhor resposta.</>
+                  <> {t('O motor calculou que')} <span className="font-mono font-bold text-emerald-400">{currentMove.bestMoveSan}</span> {t('era a melhor resposta.')}</>
                 )}
               </p>
             ) : isPositive ? (
