@@ -22,6 +22,7 @@ import { ChessPrinciples } from './components/ChessPrinciples';
 import { NewGameModal } from './components/NewGameModal';
 import { GameReportModal } from './components/GameReportModal';
 import { useI18n } from './i18n';
+import { useI18n } from './i18n';
 import {
   RotateCcw, Sparkles, Trophy, Lightbulb, RefreshCw, Flag,
   HelpCircle, ChevronRight, User, Bot, AlertTriangle, Timer, Zap, Flame, Clock, BarChart2
