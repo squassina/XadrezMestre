@@ -36,7 +36,7 @@ const apiKey = process.env.GEMINI_API_KEY;
 const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
 // Heuristic fallback explanation generator for offline/fast response
-function generateFallbackExplanation(category: string, san: string, bestSan: string, evalDiff?: number) {
+function generateFallbackExplanation(category: string, san: string, bestSan: string, evalDiff?: number, language: string = 'pt-BR') {
   switch (category) {
     case 'Peça Pendurada':
       return {
@@ -86,7 +86,7 @@ function generateFallbackExplanation(category: string, san: string, bestSan: str
 // Coach Move Analysis Endpoint
 app.post('/api/coach/explain', async (req, res) => {
   try {
-    const { fen, san, bestSan, blunderCategory, evalDiff, moveNumber, userMistakeHistory } = req.body;
+    const { fen, san, bestSan, blunderCategory, evalDiff, moveNumber, userMistakeHistory, language = 'pt-BR' } = req.body;
 
     if (!san || !bestSan) {
       return res.status(400).json({ error: 'Parâmetros san e bestSan são obrigatórios.' });
@@ -151,7 +151,7 @@ Return immediate, constructive feedback as strict JSON:
 // Diagnostics endpoint to analyze user performance over multiple games
 app.post('/api/coach/diagnostics', async (req, res) => {
   try {
-    const { stats, errorCounts, totalGames } = req.body;
+    const { stats, errorCounts, totalGames, language = 'pt-BR' } = req.body;
 
     if (!ai) {
       return res.json(language === 'en' ? {
