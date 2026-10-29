@@ -99,7 +99,7 @@ export const ChessPrinciples: React.FC<ChessPrinciplesProps> = ({ onPracticeCate
                 <div className="p-2 rounded-lg bg-slate-950 border border-slate-800">
                   {item.icon}
                 </div>
-                <h3 className="text-sm font-bold text-slate-100">{item.title}</h3>
+                <h3 className="text-sm font-bold text-slate-100">{t(item.title)}</h3>
               </div>
 
               <button
@@ -112,18 +112,18 @@ export const ChessPrinciples: React.FC<ChessPrinciplesProps> = ({ onPracticeCate
             </div>
 
             <p className="text-xs text-slate-300 font-medium leading-relaxed">
-              {item.summary}
+              {t(item.summary)}
             </p>
 
             <ul className="space-y-1.5 text-xs text-slate-400 list-disc list-inside">
               {item.details.map((bullet, idx) => (
-                <li key={idx}>{bullet}</li>
+                <li key={idx}>{t(bullet)}</li>
               ))}
             </ul>
 
             <div className="p-2.5 rounded-lg bg-slate-950/80 border border-slate-800/80 text-[11px] text-amber-300/90 flex items-center gap-2">
               <span className="font-bold shrink-0">{t('💡 Conselho Chave:')}</span>
-              <span>{item.tip}</span>
+              <span>{t(item.tip)}</span>
             </div>
           </div>
         ))}
