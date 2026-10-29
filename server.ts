@@ -61,7 +61,7 @@ function generateFallbackExplanation(category: string, san: string, bestSan: str
       };
     case 'Rei Vulnerável':
       return {
-        explanation: `O lance ${san} enfraqueceu o escudo de peões do seu rei ou atrasou o roque crítico. O lance ideal era ${bestSan}.`,
+        explanation: `O lance ${san} enfraqueceu o escudo de peões do seu rei ou permitiu xeques perigosos. O lance ideal era ${bestSan}.`,
         tacticalConcept: 'Segurança do Rei',
         proTip: 'No meio-jogo com muitas peças no tabuleiro, a prioridade máxima é colocar o rei em segurança com o roque.',
         keyQuestionsToAsk: ['Meu rei está protegido contra xeques e aberturas de coluna?']
@@ -118,7 +118,7 @@ Forneça um feedback imediato e altamente construtivo em formato JSON rigoroso:
     );
 
     const generatePromise = ai.models.generateContent({
-      model: 'gemini-3.8-flash',
+      model: 'gemini-2.5-flash',
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
@@ -184,7 +184,7 @@ Retorne um diagnóstico didático em JSON em português:
     );
 
     const generatePromise = ai.models.generateContent({
-      model: 'gemini-3.8-flash',
+      model: 'gemini-2.5-flash',
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
@@ -240,3 +240,4 @@ startServer().catch((err) => {
   console.error('Failed to start server:', err);
   process.exit(1);
 });
+

@@ -297,37 +297,85 @@ function minimax(
 /**
  * Fast detection of common tactical blunder archetype
  */
+/**
+ * Fast detection of common tactical blunder archetype
+ * Corrected to avoid marking player's check as King Vulnerable.
+ */
 export function detectBlunderCategory(
   chessBefore: Chess,
   chessAfter: Chess,
   playedMove: Move,
   bestMove: Move | null
 ): BlunderCategory {
-  if (chessAfter.inCheck()) {
+  const opponentMoves = chessAfter.moves({ verbose: true });
+  const moveNumber = chessAfter.history().length;
+  const playerColor = playedMove.color;
+
+  // 1. King Vulnerability: Did the move allow immediate mate or dangerous checks against player's King?
+  const opponentChecks = opponentMoves.filter((m) => m.san.includes('+') || m.san.includes('#'));
+  const allowsMate = opponentMoves.some((m) => m.san.includes('#'));
+  
+  if (allowsMate) {
     return 'Rei Vulnerável';
   }
 
-  const opponentMoves = chessAfter.moves({ verbose: true });
-  // Check if a piece was left hanging (piece on destination or elsewhere is captured for free)
+  // If opponent now has devastating checks against the player's king, or player moved king unnecessarily
+  if (opponentChecks.length > 0) {
+    // If king was moved losing castling rights early or checks win material
+    if (playedMove.piece === 'k' && moveNumber <= 30) {
+      return 'Rei Vulnerável';
+    }
+    // King shield pawn moved (e.g. f2/f3/f4/g4 or f7/f6/f5/g5)
+    if (playedMove.piece === 'p' && (playedMove.from.startsWith('f') || playedMove.from.startsWith('g'))) {
+      return 'Rei Vulnerável';
+    }
+  }
+
+  // 2. Check if a piece was left hanging (piece on destination or elsewhere is captured for free)
   const destPiece = chessAfter.get(playedMove.to);
   if (destPiece) {
     const capturesOnDest = opponentMoves.filter((m) => m.to === playedMove.to);
     if (capturesOnDest.length > 0) {
-      const pieceVal = PIECE_VALUES[destPiece.type];
-      const capturingPieceVal = PIECE_VALUES[capturesOnDest[0].piece];
+      const pieceVal = PIECE_VALUES[destPiece.type] || 100;
+      const capturingPieceVal = PIECE_VALUES[capturesOnDest[0].piece] || 100;
       if (pieceVal >= capturingPieceVal) {
         return 'Peça Pendurada';
       }
     }
   }
 
-  // Check for missed winning tactic
+  // Check if any other piece of player is attacked undefended
+  for (const oppMove of opponentMoves) {
+    if (oppMove.captured && PIECE_VALUES[oppMove.captured] >= 300) {
+      // High value piece captured
+      return 'Peça Pendurada';
+    }
+  }
+
+  // 3. Fork check: does opponent have a knight/pawn move attacking 2+ pieces?
+  for (const oppMove of opponentMoves) {
+    if (oppMove.piece === 'n' || oppMove.piece === 'p') {
+      const testChess = new Chess(chessAfter.fen());
+      try {
+        testChess.move(oppMove);
+        const threats = testChess.moves({ verbose: true }).filter((m) => {
+          const target = testChess.get(m.to);
+          return target && target.color === playerColor && PIECE_VALUES[target.type] >= 300;
+        });
+        const uniqueTargets = new Set(threats.map((m) => m.to));
+        if (uniqueTargets.size >= 2) {
+          return 'Garfo Sofrido';
+        }
+      } catch {}
+    }
+  }
+
+  // 4. Missed winning tactic
   if (bestMove && (bestMove.captured || bestMove.san.includes('+') || bestMove.san.includes('#'))) {
     return 'Oportunidade Tática Perdida';
   }
 
-  // Opening slow development
-  const moveNumber = chessAfter.history().length;
+  // 5. Opening slow development
   if (moveNumber <= 12 && (playedMove.piece === 'q' || playedMove.piece === 'k')) {
     return 'Desenvolvimento Lento';
   }

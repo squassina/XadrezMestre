@@ -1,9 +1,11 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Chess, Square, PieceSymbol, Move } from 'chess.js';
 import { 
-  AnalyzedMove, BotLevel, PlayerStats, BoardArrow, BlunderCategory, MoveQuality, TimeControl 
+  AnalyzedMove, BotLevel, PlayerStats, BoardArrow, BlunderCategory, MoveQuality, TimeControl,
+  PieceSet, BoardTheme 
 } from './types/chess';
-import { analyzeMove, analyzeMoveAsync, getBotMove, evaluateBoard, BOT_CONFIGS } from './utils/engine';
+import { analyzeMove, analyzeMoveAsync, getBotMove, evaluateBoard, detectBlunderCategory, BOT_CONFIGS } from './utils/engine';
+import { botMove, analyzeMoveRemote, BOT_ENGINE, warmUp, API_BASE_URL } from './utils/remoteEngine';
 import { soundEffects } from './utils/sound';
 import { TIME_CONTROLS, DEFAULT_TIME_CONTROL } from './data/timeControls';
 import { TopNav, NavTab } from './components/TopNav';
@@ -13,14 +15,15 @@ import { EvalBar } from './components/EvalBar';
 import { MoveHistory } from './components/MoveHistory';
 import { CoachPanel } from './components/CoachPanel';
 import { OpeningBookPanel } from './components/OpeningBookPanel';
-import { getOpeningForPosition } from './data/openings';
+import { getOpeningForPosition, getBookMove } from './data/openings';
 import { TacticalTrainer } from './components/TacticalTrainer';
 import { MistakeAnalytics } from './components/MistakeAnalytics';
 import { ChessPrinciples } from './components/ChessPrinciples';
 import { NewGameModal } from './components/NewGameModal';
+import { GameReportModal } from './components/GameReportModal';
 import { 
   RotateCcw, Sparkles, Trophy, Lightbulb, RefreshCw, Flag, 
-  HelpCircle, ChevronRight, User, Bot, AlertTriangle, Timer, Zap, Flame, Clock 
+  HelpCircle, ChevronRight, User, Bot, AlertTriangle, Timer, Zap, Flame, Clock, BarChart2 
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -49,8 +52,39 @@ const DEFAULT_STATS: PlayerStats = {
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<NavTab>('game');
-  const [boardTheme, setBoardTheme] = useState<'tournament' | 'wood' | 'emerald'>('emerald');
+  const [boardTheme, setBoardTheme] = useState<BoardTheme>(() => {
+    try {
+      return (localStorage.getItem('xadrez_board_theme') as BoardTheme) || 'emerald';
+    } catch {
+      return 'emerald';
+    }
+  });
+  const [pieceSet, setPieceSet] = useState<PieceSet>(() => {
+    try {
+      return (localStorage.getItem('xadrez_piece_set') as PieceSet) || 'cburnett';
+    } catch {
+      return 'cburnett';
+    }
+  });
+
+  const handleSelectTheme = (theme: BoardTheme) => {
+    setBoardTheme(theme);
+    try { localStorage.setItem('xadrez_board_theme', theme); } catch {}
+  };
+
+  const handleSelectPieceSet = (set: PieceSet) => {
+    setPieceSet(set);
+    try { localStorage.setItem('xadrez_piece_set', set); } catch {}
+  };
+
   const [newGameModalOpen, setNewGameModalOpen] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const botAbortRef = useRef<AbortController | null>(null);
+
+  // Ping engine backend on mount
+  useEffect(() => {
+    warmUp();
+  }, []);
 
   // Chess Game State
   const [chess, setChess] = useState<Chess>(new Chess());
@@ -211,13 +245,18 @@ export default function App() {
     coachInterruption: newCoach,
     showEvalBar: newEval,
     timeControl: newTimeControl,
+    pieceSet: newPieceSet,
   }: {
     botLevel: BotLevel;
     playerColor: 'w' | 'b';
     coachInterruption: boolean;
     showEvalBar: boolean;
     timeControl: TimeControl;
+    pieceSet?: PieceSet;
   }) => {
+    if (newPieceSet) {
+      handleSelectPieceSet(newPieceSet);
+    }
     const newChess = new Chess();
     setChess(newChess);
     setMoves([]);
@@ -291,52 +330,116 @@ export default function App() {
     return false;
   };
 
-  // Bot move logic
+  // Bot move logic with Stockfish and Opening Book integration
   const makeBotMove = useCallback((currentGame: Chess, currentBot: BotLevel, currentMoveList: AnalyzedMove[]) => {
     setIsBotThinking(true);
+    botAbortRef.current?.abort();
+    const ctrl = new AbortController();
+    botAbortRef.current = ctrl;
 
-    setTimeout(() => {
-      const botMove = getBotMove(currentGame, currentBot);
-
-      if (!botMove) {
-        setIsBotThinking(false);
-        return;
-      }
-
-      const chessBeforeBot = new Chess(currentGame.fen());
-      const newGame = new Chess(currentGame.fen());
-      newGame.move(botMove);
-
-      soundEffects.playMove();
-      if (botMove.captured) soundEffects.playCapture();
-      if (newGame.inCheck()) soundEffects.playCheck();
-
-      // Immediate board update
-      setChess(newGame);
-      setLastMove({ from: botMove.from, to: botMove.to });
-      setArrows([]);
-      setIsShowingBestMoveArrow(false);
-      setIsBotThinking(false);
-
-      // Add increment to bot's clock
-      if (timeControl.incrementSeconds > 0) {
-        const botColor = playerColor === 'w' ? 'b' : 'w';
-        if (botColor === 'w') {
-          setWhiteTime((t) => t + timeControl.incrementSeconds * 1000);
-        } else {
-          setBlackTime((t) => t + timeControl.incrementSeconds * 1000);
+    const executeBotTurn = async () => {
+      try {
+        const fen = currentGame.fen();
+        const legalMoves = currentGame.moves({ verbose: true });
+        if (legalMoves.length === 0 || ctrl.signal.aborted) {
+          setIsBotThinking(false);
+          return;
         }
-      }
 
-      // Async analysis of bot move
-      analyzeMoveAsync(chessBeforeBot, botMove, 2).then((analyzed) => {
+        // 1. Check opening book first (main lines in first 10-15 moves)
+        let chosenMove: Move | null = null;
+        const bookEntry = getOpeningForPosition(fen);
+        const bookMoveObj = getBookMove(fen);
+
+        if (bookMoveObj) {
+          const match = legalMoves.find((m) => m.san === bookMoveObj.san);
+          if (match) {
+            chosenMove = match;
+          }
+        }
+
+        // 2. If no book move, call botMove (Stockfish API with local search fallback)
+        if (!chosenMove) {
+          const remoteChoice = await botMove(fen, BOT_ENGINE[currentBot], ctrl.signal);
+          if (ctrl.signal.aborted) return;
+          const match = legalMoves.find(
+            (m) => m.from === remoteChoice.from && m.to === remoteChoice.to && (m.promotion ?? '') === (remoteChoice.promotion ?? '')
+          );
+          chosenMove = match || legalMoves[0];
+        }
+
+        if (!chosenMove || ctrl.signal.aborted) {
+          setIsBotThinking(false);
+          return;
+        }
+
+        const chessBeforeBot = new Chess(fen);
+        const newGame = new Chess(fen);
+        newGame.move(chosenMove);
+
+        soundEffects.playMove();
+        if (chosenMove.captured) soundEffects.playCapture();
+        if (newGame.inCheck()) soundEffects.playCheck();
+
+        // Immediate board update
+        setChess(newGame);
+        setLastMove({ from: chosenMove.from, to: chosenMove.to });
+        setArrows([]);
+        setIsShowingBestMoveArrow(false);
+        setIsBotThinking(false);
+
+        // Add increment to bot's clock
+        if (timeControl.incrementSeconds > 0) {
+          const botColor = playerColor === 'w' ? 'b' : 'w';
+          if (botColor === 'w') {
+            setWhiteTime((t) => t + timeControl.incrementSeconds * 1000);
+          } else {
+            setBlackTime((t) => t + timeControl.incrementSeconds * 1000);
+          }
+        }
+
+        // Move Analysis for Bot
+        const remoteAnalysis = await analyzeMoveRemote(fen, chosenMove.san, 10, ctrl.signal);
+        let analyzed: AnalyzedMove;
+
+        if (remoteAnalysis) {
+          analyzed = {
+            moveNumber: Math.ceil(newGame.history().length / 2),
+            san: remoteAnalysis.playedSan,
+            from: chosenMove.from,
+            to: chosenMove.to,
+            fen: newGame.fen(),
+            color: chessBeforeBot.turn(),
+            evalBefore: remoteAnalysis.cpBefore,
+            evalAfter: remoteAnalysis.cpAfter,
+            evalDiff: Math.round(remoteAnalysis.lossPct * 10),
+            quality: remoteAnalysis.quality,
+            qualityLabel: remoteAnalysis.quality === 'best' ? 'Melhor Lance' : remoteAnalysis.quality === 'good' ? 'Bom' : remoteAnalysis.quality === 'inaccuracy' ? 'Imprecisão' : remoteAnalysis.quality === 'mistake' ? 'Erro' : 'Gafe (Capivara)',
+            bestMoveSan: remoteAnalysis.bestSan || remoteAnalysis.bestMove,
+            bestMoveFromTo: remoteAnalysis.bestMove && remoteAnalysis.bestMove.length >= 4 ? { from: remoteAnalysis.bestMove.slice(0, 2), to: remoteAnalysis.bestMove.slice(2, 4) } : undefined,
+            isBookMove: Boolean(bookMoveObj),
+            openingName: bookEntry?.name,
+            eco: bookEntry?.eco,
+            timestamp: Date.now(),
+          };
+        } else {
+          analyzed = await analyzeMoveAsync(chessBeforeBot, chosenMove, 2);
+        }
+
         const newMoves = [...currentMoveList, analyzed];
         setMoves(newMoves);
         setHistoryIndex(newMoves.length - 1);
         setEvalScore(analyzed.evalAfter);
         checkGameOverStatus(newGame, newGame.turn() === 'w' ? 'b' : 'w');
-      });
-    }, 350);
+      } catch (err: any) {
+        if (err.name !== 'AbortError') {
+          console.error('Error during bot move:', err);
+        }
+        setIsBotThinking(false);
+      }
+    };
+
+    executeBotTurn();
   }, [checkGameOverStatus, playerColor, timeControl.incrementSeconds]);
 
   // Handle Player Move - Zero-Lag Optimistic Execution
@@ -372,8 +475,39 @@ export default function App() {
         soundEffects.playMove();
       }
 
-      // 2. NON-BLOCKING ASYNC ANALYSIS
-      analyzeMoveAsync(chessBefore, testMove, 2).then((analyzed) => {
+      // 2. NON-BLOCKING ASYNC ANALYSIS (Stockfish remote with local fallback)
+      analyzeMoveRemote(chessBefore.fen(), testMove.san, 12).then(async (remoteAnalysis) => {
+        let analyzed: AnalyzedMove;
+
+        if (remoteAnalysis) {
+          const quality = remoteAnalysis.quality;
+          const isBook = Boolean(getOpeningForPosition(chessBefore.fen())?.moves.some((m) => m.san === testMove.san));
+          const blunderCat = !isBook && (quality === 'blunder' || quality === 'mistake' || quality === 'inaccuracy')
+            ? detectBlunderCategory(chessBefore, newGame, testMove, null)
+            : undefined;
+
+          analyzed = {
+            moveNumber: Math.ceil(newGame.history().length / 2),
+            san: remoteAnalysis.playedSan,
+            from: testMove.from,
+            to: testMove.to,
+            fen: newGame.fen(),
+            color: playerColor,
+            evalBefore: remoteAnalysis.cpBefore,
+            evalAfter: remoteAnalysis.cpAfter,
+            evalDiff: Math.round(remoteAnalysis.lossPct * 10),
+            quality,
+            qualityLabel: isBook ? 'Livro Teórico' : quality === 'best' ? 'Melhor Lance' : quality === 'good' ? 'Bom' : quality === 'inaccuracy' ? 'Imprecisão' : quality === 'mistake' ? 'Erro' : 'Gafe (Capivara)',
+            blunderCategory: blunderCat,
+            bestMoveSan: remoteAnalysis.bestSan || remoteAnalysis.bestMove,
+            bestMoveFromTo: remoteAnalysis.bestMove && remoteAnalysis.bestMove.length >= 4 ? { from: remoteAnalysis.bestMove.slice(0, 2), to: remoteAnalysis.bestMove.slice(2, 4) } : undefined,
+            isBookMove: isBook,
+            timestamp: Date.now(),
+          };
+        } else {
+          analyzed = await analyzeMoveAsync(chessBefore, testMove, 2);
+        }
+
         if (analyzed.quality === 'blunder' || analyzed.quality === 'mistake') {
           soundEffects.playBlunder();
         }
@@ -420,6 +554,8 @@ export default function App() {
 
   // Undo move and retry
   const handleUndoMove = () => {
+    botAbortRef.current?.abort();
+    setIsBotThinking(false);
     if (moves.length === 0) return;
 
     // If bot just moved, we undo 2 moves (bot move and player move)
@@ -470,7 +606,7 @@ export default function App() {
 
     setIsLoadingAiHelp(true);
     try {
-      const res = await fetch('/api/coach/explain', {
+      const res = await fetch(`${API_BASE_URL}/api/coach/explain`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -532,7 +668,9 @@ export default function App() {
         onSelectTab={setActiveTab}
         onNewGame={() => setNewGameModalOpen(true)}
         boardTheme={boardTheme}
-        onSelectTheme={setBoardTheme}
+        onSelectTheme={handleSelectTheme}
+        pieceSet={pieceSet}
+        onSelectPieceSet={handleSelectPieceSet}
       />
 
       {/* Main View Area */}
@@ -603,6 +741,7 @@ export default function App() {
                     arrows={arrows}
                     lastMove={lastMove}
                     boardTheme={boardTheme}
+                    pieceSet={pieceSet}
                   />
                 </div>
               </div>
@@ -641,6 +780,16 @@ export default function App() {
                     <RotateCcw className="w-3 h-3" />
                     <span>Desfazer</span>
                   </button>
+                  {moves.length >= 2 && (
+                    <button
+                      onClick={() => setIsReportModalOpen(true)}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-700/60 text-indigo-300 text-xs font-medium shadow-xs transition-colors"
+                      title="Gráfico de Precisão e Relatório da Partida"
+                    >
+                      <BarChart2 className="w-3 h-3 text-indigo-400" />
+                      <span>Relatório</span>
+                    </button>
+                  )}
                   <button
                     onClick={() => setPlayerColor(playerColor === 'w' ? 'b' : 'w')}
                     className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700 transition-colors"
@@ -661,18 +810,25 @@ export default function App() {
                   <Trophy className="w-7 h-7 text-amber-400 mx-auto" />
                   <h3 className="text-base font-bold text-slate-100">{gameOver.message}</h3>
                   <p className="text-xs text-slate-400">
-                    Acesse a aba <strong>"Diagnóstico de Erros"</strong> para ver os padrões e dicas desta partida!
+                    A partida foi finalizada! Veja o gráfico de precisão lance a lance e momentos críticos.
                   </p>
-                  <div className="flex items-center justify-center gap-2 mt-1">
+                  <div className="flex flex-wrap items-center justify-center gap-2 mt-1">
+                    <button
+                      onClick={() => setIsReportModalOpen(true)}
+                      className="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md flex items-center gap-1.5 transition-colors"
+                    >
+                      <BarChart2 className="w-3.5 h-3.5" />
+                      Ver Relatório da Partida
+                    </button>
                     <button
                       onClick={() => handleStartNewGame({ botLevel, playerColor, coachInterruption, showEvalBar, timeControl })}
-                      className="px-4 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold shadow-sm"
+                      className="px-4 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold shadow-sm transition-colors"
                     >
                       Jogar Novamente
                     </button>
                     <button
                       onClick={() => setActiveTab('tactics')}
-                      className="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700"
+                      className="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 transition-colors"
                     >
                       Treinar Táticas
                     </button>
@@ -717,6 +873,7 @@ export default function App() {
             playerStats={playerStats}
             onUpdateStats={updateStats}
             boardTheme={boardTheme}
+            pieceSet={pieceSet}
           />
         )}
 
@@ -752,6 +909,32 @@ export default function App() {
         onStartGame={handleStartNewGame}
         currentBotLevel={botLevel}
         currentTimeControl={timeControl}
+        currentPieceSet={pieceSet}
+      />
+
+      {/* Game Precision & Analysis Report Modal */}
+      <GameReportModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        moves={moves}
+        playerColor={playerColor}
+        botName={BOT_CONFIGS[botLevel].name}
+        botElo={BOT_CONFIGS[botLevel].elo}
+        timeControl={timeControl.name}
+        gameOverMessage={gameOver.message}
+        winner={gameOver.winner}
+        onReviewMove={(moveIdx) => {
+          handleSelectHistoryMove(moveIdx);
+          setIsReportModalOpen(false);
+        }}
+        onNewGame={() => {
+          setIsReportModalOpen(false);
+          setNewGameModalOpen(true);
+        }}
+        onPracticeTactics={() => {
+          setIsReportModalOpen(false);
+          setActiveTab('tactics');
+        }}
       />
     </div>
   );
