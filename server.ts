@@ -37,6 +37,17 @@ const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
 // Heuristic fallback explanation generator for offline/fast response
 function generateFallbackExplanation(category: string, san: string, bestSan: string, evalDiff?: number, language: string = 'pt-BR') {
+  if (language === 'en') {
+    switch (category) {
+      case 'Peça Pendurada': return { explanation: 'The move ' + san + ' left a piece undefended. The recommended move was ' + bestSan + '.', tacticalConcept: 'Material Safety', proTip: 'Before moving, check what attacks the destination square and whether you can recapture.', keyQuestionsToAsk: ['Is my piece defended?', 'Can the opponent gain tempo by attacking it?'] };
+      case 'Cravada Sofrida': return { explanation: 'The move ' + san + ' allowed a pin against a more valuable piece. ' + bestSan + ' kept the position safer.', tacticalConcept: 'Pins', proTip: 'Watch for pieces aligned on the same rank, file, or diagonal.', keyQuestionsToAsk: ['Are valuable pieces aligned?', 'Can I prevent or break the pin?'] };
+      case 'Garfo Sofrido': return { explanation: 'The move ' + san + ' allowed a double attack. The correct move was ' + bestSan + '.', tacticalConcept: 'Forks and Double Attacks', proTip: 'Look for knights and pawns attacking two targets at once.', keyQuestionsToAsk: ['Can the opponent attack two pieces in one move?'] };
+      case 'Rei Vulnerável': return { explanation: 'The move ' + san + ' weakened your king’s shelter or allowed dangerous checks. The ideal move was ' + bestSan + '.', tacticalConcept: 'King Safety', proTip: 'Prioritize king safety and castling.', keyQuestionsToAsk: ['Is my king safe from checks and open files?'] };
+      case 'Oportunidade Tática Perdida': return { explanation: 'You played ' + san + ', but ' + bestSan + ' offered a tactical chance to win material or attack decisively.', tacticalConcept: 'Forcing Moves', proTip: 'Calculate checks, captures, and direct threats first.', keyQuestionsToAsk: ['Do I have a useful check or capture?'] };
+      default: return { explanation: 'The move ' + san + ' gave up initiative and space. The engine’s best move was ' + bestSan + '.', tacticalConcept: 'Piece Activity', proTip: 'Improve your least active piece and control the center.', keyQuestionsToAsk: ['Which piece is least active?'] };
+    }
+  }
+  switch (category) {
   switch (category) {
     case 'Peça Pendurada':
       return {
