@@ -637,7 +637,7 @@ export default function App() {
         body: JSON.stringify({
           fen: currentMove.fen,
           san: currentMove.san,
-          bestSan: currentMove.bestMoveSan || 'Melhor lance',
+          bestSan: currentMove.bestMoveSan || t('Melhor lance'),
           blunderCategory: currentMove.blunderCategory,
           evalDiff: currentMove.evalDiff,
           moveNumber: currentMove.moveNumber,
@@ -848,7 +848,7 @@ export default function App() {
                   <button
                     onClick={() => setPlayerColor(playerColor === 'w' ? 'b' : 'w')}
                     className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700 transition-colors"
-                    title="Girar Tabuleiro"
+                    title={t('Girar Tabuleiro')}
                   >
                     <RefreshCw className="w-3 h-3" />
                     <span>{t('Girar')}</span>
