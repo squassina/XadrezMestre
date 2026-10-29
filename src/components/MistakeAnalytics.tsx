@@ -254,9 +254,9 @@ export const MistakeAnalytics: React.FC<MistakeAnalyticsProps> = ({
                 <div className="text-slate-300">
                   {t('Você jogou:')} <span className="font-mono font-bold text-rose-300">{m.movePlayed}</span>
                   <span className="mx-2 text-slate-500">|</span>
-                  Melhor: <span className="font-mono font-bold text-emerald-400">{m.bestMove}</span>
+                  {t('Melhor:')} <span className="font-mono font-bold text-emerald-400">{m.bestMove}</span>
                 </div>
-                <p className="text-[11px] text-slate-400 italic">{m.explanation}</p>
+                <p className="text-[11px] text-slate-400 italic">{language === 'en' ? m.explanation.replace(/^Você jogou (.*), permitindo desvantagem tática em relação a (.*)\.$/, 'You played $1, allowing a tactical disadvantage compared with $2.') : m.explanation}</p>
               </div>
             ))}
           </div>
