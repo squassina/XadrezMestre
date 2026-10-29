@@ -16,7 +16,7 @@ import { EvalBar } from './components/EvalBar';
 import { MoveHistory } from './components/MoveHistory';
 import { CoachPanel } from './components/CoachPanel';
 import { OpeningBookPanel } from './components/OpeningBookPanel';
-import { canUseOpeningBook, getOpeningForPosition, getBookMove } from './data/openings';
+import { getOpeningForPosition, getBookMove } from './data/openings';
 import { TacticalTrainer } from './components/TacticalTrainer';
 import { MistakeAnalytics } from './components/MistakeAnalytics';
 import { ChessPrinciples } from './components/ChessPrinciples';
@@ -83,6 +83,9 @@ export default function App() {
   const [newGameModalMode, setNewGameModalMode] = useState<'full' | 'bot'>('full');
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const botAbortRef = useRef<AbortController | null>(null);
+  const movesRef = useRef<AnalyzedMove[]>([]);
+  const gameGenRef = useRef(0);
+  const commitChainRef = useRef<Promise<void>>(Promise.resolve());
 
   // Ping engine backend on mount
   useEffect(() => {
@@ -101,9 +104,26 @@ export default function App() {
   const [showEvalBar, setShowEvalBar] = useState(true);
 
   const [moves, setMoves] = useState<AnalyzedMove[]>([]);
+  useEffect(() => { movesRef.current = moves; }, [moves]);
   const [historyIndex, setHistoryIndex] = useState<number>(-1);
   const [isBotThinking, setIsBotThinking] = useState(false);
   const [evalScore, setEvalScore] = useState<number>(0);
+
+  const enqueueMove = useCallback((analysis: Promise<AnalyzedMove>, onCommit?: (move: AnalyzedMove) => void) => {
+    const generation = gameGenRef.current;
+    commitChainRef.current = commitChainRef.current
+      .then(() => analysis)
+      .then((analyzed) => {
+        if (generation !== gameGenRef.current) return;
+        const next = [...movesRef.current, analyzed];
+        movesRef.current = next;
+        setMoves(next);
+        setHistoryIndex(next.length - 1);
+        setEvalScore(analyzed.evalAfter);
+        onCommit?.(analyzed);
+      })
+      .catch((error) => console.error('Erro ao confirmar análise do lance:', error));
+  }, []);
   const [arrows, setArrows] = useState<BoardArrow[]>([]);
   const [lastMove, setLastMove] = useState<{ from: string; to: string } | null>(null);
   const [isShowingBestMoveArrow, setIsShowingBestMoveArrow] = useState(false);
@@ -263,6 +283,10 @@ export default function App() {
     if (newPieceSet) {
       handleSelectPieceSet(newPieceSet);
     }
+    botAbortRef.current?.abort();
+    gameGenRef.current++;
+    movesRef.current = [];
+    commitChainRef.current = Promise.resolve();
     const newChess = new Chess();
     setChess(newChess);
     setMoves([]);
@@ -288,7 +312,7 @@ export default function App() {
     if (newColor === 'b') {
       setIsBotThinking(true);
       setTimeout(() => {
-        makeBotMove(newChess, newLevel, []);
+        makeBotMove(newChess, newLevel);
       }, 500);
     }
   };
@@ -337,7 +361,7 @@ export default function App() {
   };
 
   // Bot move logic with Stockfish and Opening Book integration
-  const makeBotMove = useCallback((currentGame: Chess, currentBot: BotLevel, currentMoveList: AnalyzedMove[]) => {
+  const makeBotMove = useCallback((currentGame: Chess, currentBot: BotLevel) => {
     setIsBotThinking(true);
     setThinkingPlan({ status: 'thinking', engine: 'Stockfish', lines: [] });
     botAbortRef.current?.abort();
@@ -423,38 +447,34 @@ export default function App() {
           }
         }
 
-        // Move Analysis for Bot
-        const remoteAnalysis = await analyzeMoveRemote(fen, chosenMove.san, 10, ctrl.signal);
-        let analyzed: AnalyzedMove;
-
-        if (remoteAnalysis) {
-          analyzed = {
-            moveNumber: Math.ceil(newGame.history().length / 2),
-            san: remoteAnalysis.playedSan,
-            from: chosenMove.from,
-            to: chosenMove.to,
-            fen: newGame.fen(),
-            color: chessBeforeBot.turn(),
-            evalBefore: remoteAnalysis.cpBefore,
-            evalAfter: remoteAnalysis.cpAfter,
-            evalDiff: Math.round(remoteAnalysis.lossPct * 10),
-            quality: remoteAnalysis.quality,
-            qualityLabel: remoteAnalysis.quality === 'best' ? 'Melhor Lance' : remoteAnalysis.quality === 'good' ? 'Bom' : remoteAnalysis.quality === 'inaccuracy' ? 'Imprecisão' : remoteAnalysis.quality === 'mistake' ? 'Erro' : 'Gafe (Capivara)',
-            bestMoveSan: remoteAnalysis.bestSan || remoteAnalysis.bestMove,
-            bestMoveFromTo: remoteAnalysis.bestMove && remoteAnalysis.bestMove.length >= 4 ? { from: remoteAnalysis.bestMove.slice(0, 2), to: remoteAnalysis.bestMove.slice(2, 4) } : undefined,
-            isBookMove: Boolean(bookMoveObj),
-            openingName: bookEntry?.name,
-            eco: bookEntry?.eco,
-            timestamp: Date.now(),
-          };
-        } else {
-          analyzed = await analyzeMoveAsync(chessBeforeBot, chosenMove, 2);
-        }
-
-        const newMoves = [...currentMoveList, analyzed];
-        setMoves(newMoves);
-        setHistoryIndex(newMoves.length - 1);
-        setEvalScore(analyzed.evalAfter);
+        // Analyze in parallel; commit the move only in chronological order.
+        const playedMove: Move = chosenMove;
+        const analysis = (async (): Promise<AnalyzedMove> => {
+          const remoteAnalysis = await analyzeMoveRemote(fen, playedMove.san, 10);
+          if (remoteAnalysis) {
+            return {
+              moveNumber: Math.ceil(newGame.history().length / 2),
+              san: remoteAnalysis.playedSan,
+              from: playedMove.from,
+              to: playedMove.to,
+              fen: newGame.fen(),
+              color: chessBeforeBot.turn(),
+              evalBefore: remoteAnalysis.cpBefore,
+              evalAfter: remoteAnalysis.cpAfter,
+              evalDiff: Math.round(remoteAnalysis.lossPct * 10),
+              quality: remoteAnalysis.quality,
+              qualityLabel: remoteAnalysis.quality === 'best' ? 'Melhor Lance' : remoteAnalysis.quality === 'good' ? 'Bom' : remoteAnalysis.quality === 'inaccuracy' ? 'Imprecisão' : remoteAnalysis.quality === 'mistake' ? 'Erro' : 'Gafe (Capivara)',
+              bestMoveSan: remoteAnalysis.bestSan || remoteAnalysis.bestMove,
+              bestMoveFromTo: remoteAnalysis.bestMove && remoteAnalysis.bestMove.length >= 4 ? { from: remoteAnalysis.bestMove.slice(0, 2), to: remoteAnalysis.bestMove.slice(2, 4) } : undefined,
+              isBookMove: Boolean(bookMoveObj),
+              openingName: bookEntry?.name,
+              eco: bookEntry?.eco,
+              timestamp: Date.now(),
+            };
+          }
+          return analyzeMoveAsync(chessBeforeBot, playedMove, 2);
+        })();
+        enqueueMove(analysis);
         checkGameOverStatus(newGame, newGame.turn() === 'w' ? 'b' : 'w');
       } catch (err: any) {
         if (err.name !== 'AbortError') {
@@ -465,7 +485,7 @@ export default function App() {
     };
 
     executeBotTurn();
-  }, [checkGameOverStatus, playerColor, timeControl.incrementSeconds, maxQuiescenceDepth]);
+  }, [checkGameOverStatus, playerColor, timeControl.incrementSeconds, maxQuiescenceDepth, enqueueMove]);
 
   // Handle Player Move - Zero-Lag Optimistic Execution
   const handlePlayerMove = useCallback(({ from, to, promotion }: { from: Square; to: Square; promotion?: string }) => {
@@ -501,18 +521,16 @@ export default function App() {
         soundEffects.playMove();
       }
 
-      // 2. NON-BLOCKING ASYNC ANALYSIS (Stockfish remote with local fallback)
-      analyzeMoveRemote(chessBefore.fen(), testMove.san, 12).then(async (remoteAnalysis) => {
-        let analyzed: AnalyzedMove;
-
+      // Analyze immediately, but never make the bot wait for coach analysis.
+      const analysis = (async (): Promise<AnalyzedMove> => {
+        const remoteAnalysis = await analyzeMoveRemote(chessBefore.fen(), testMove.san, 12);
         if (remoteAnalysis) {
           const quality = remoteAnalysis.quality;
           const isBook = Boolean(getOpeningForPosition(chessBefore.fen())?.moves.some((m) => m.san === testMove.san));
           const blunderCat = !isBook && (quality === 'blunder' || quality === 'mistake' || quality === 'inaccuracy')
             ? detectBlunderCategory(chessBefore, newGame, testMove, null)
             : undefined;
-
-          analyzed = {
+          return {
             moveNumber: Math.ceil(newGame.history().length / 2),
             san: remoteAnalysis.playedSan,
             from: testMove.from,
@@ -530,20 +548,12 @@ export default function App() {
             isBookMove: isBook,
             timestamp: Date.now(),
           };
-        } else {
-          analyzed = await analyzeMoveAsync(chessBefore, testMove, 2);
         }
+        return analyzeMoveAsync(chessBefore, testMove, 2);
+      })();
 
-        if (analyzed.quality === 'blunder' || analyzed.quality === 'mistake') {
-          soundEffects.playBlunder();
-        }
-
-        const newMoveList = [...moves, analyzed];
-        setMoves(newMoveList);
-        setHistoryIndex(newMoveList.length - 1);
-        setEvalScore(analyzed.evalAfter);
-
-        // Record mistake if blunder or mistake
+      enqueueMove(analysis, (analyzed) => {
+        if (analyzed.quality === 'blunder' || analyzed.quality === 'mistake') soundEffects.playBlunder();
         if (analyzed.blunderCategory && (analyzed.quality === 'blunder' || analyzed.quality === 'mistake' || analyzed.quality === 'inaccuracy')) {
           const cat = analyzed.blunderCategory;
           const currentCount = playerStats.mistakesByType[cat] || 0;
@@ -556,45 +566,35 @@ export default function App() {
             bestMove: analyzed.bestMoveSan || 'Melhor lance',
             explanation: language === 'en' ? `You played ${testMove.san}, allowing a tactical disadvantage compared with ${analyzed.bestMoveSan}.` : t('Você jogou') + ' ' + testMove.san + ', ' + t('permitindo desvantagem tática em relação a') + ' ' + analyzed.bestMoveSan + '.',
           };
-
           updateStats({
-            mistakesByType: {
-              ...playerStats.mistakesByType,
-              [cat]: currentCount + 1,
-            },
+            mistakesByType: { ...playerStats.mistakesByType, [cat]: currentCount + 1 },
             recentMistakes: [newMistakeRecord, ...playerStats.recentMistakes.slice(0, 19)],
           });
         }
-
-        // Check for Game Over
-        const ended = checkGameOverStatus(newGame, playerColor);
-        if (ended) return;
-
-        // Trigger Bot response if not game over
-        makeBotMove(newGame, botLevel, newMoveList);
       });
+
+      const ended = checkGameOverStatus(newGame, playerColor);
+      if (!ended) makeBotMove(newGame, botLevel);
     } catch (e) {
       console.error(e);
     }
-  }, [chess, playerColor, isBotThinking, gameOver.isOver, moves, botLevel, playerStats, makeBotMove, checkGameOverStatus, timeControl.incrementSeconds]);
+  }, [chess, playerColor, isBotThinking, gameOver.isOver, botLevel, playerStats, makeBotMove, checkGameOverStatus, enqueueMove, timeControl.incrementSeconds, language, t]);
 
   // Undo move and retry
-  const handleUndoMove = () => {
+  const handleUndoMove = async () => {
     botAbortRef.current?.abort();
     setIsBotThinking(false);
-    if (moves.length === 0) return;
+    await commitChainRef.current;
+    const currentMoves = movesRef.current;
+    if (currentMoves.length === 0) return;
 
-    // If bot just moved, we undo 2 moves (bot move and player move)
-    // If only player moved, undo 1 move
     const stepsToUndo = chess.turn() !== playerColor ? 1 : 2;
-    const targetIdx = Math.max(-1, moves.length - stepsToUndo - 1);
-
+    const targetIdx = Math.max(-1, currentMoves.length - stepsToUndo - 1);
     const replayChess = new Chess();
-    for (let i = 0; i <= targetIdx; i++) {
-      replayChess.move(moves[i].san);
-    }
+    for (let i = 0; i <= targetIdx; i++) replayChess.move(currentMoves[i].san);
 
-    const slicedMoves = moves.slice(0, targetIdx + 1);
+    const slicedMoves = currentMoves.slice(0, targetIdx + 1);
+    movesRef.current = slicedMoves;
     setChess(replayChess);
     setMoves(slicedMoves);
     setHistoryIndex(targetIdx);
