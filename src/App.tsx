@@ -745,7 +745,7 @@ export default function App() {
                     className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700 transition-colors"
                     title={t('Trocar adversário')}
                   >
-                    Trocar Bot
+                    {t('Trocar Bot')}
                   </button>
                 </div>
               </div>
