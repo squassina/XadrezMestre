@@ -15,7 +15,7 @@ import { EvalBar } from './components/EvalBar';
 import { MoveHistory } from './components/MoveHistory';
 import { CoachPanel } from './components/CoachPanel';
 import { OpeningBookPanel } from './components/OpeningBookPanel';
-import { getOpeningForPosition, getBookMove } from './data/openings';
+import { canUseOpeningBook, getOpeningForPosition, getBookMove } from './data/openings';
 import { TacticalTrainer } from './components/TacticalTrainer';
 import { MistakeAnalytics } from './components/MistakeAnalytics';
 import { ChessPrinciples } from './components/ChessPrinciples';
@@ -343,7 +343,9 @@ export default function App() {
         // 1. Check opening book first (main lines in first 10-15 moves)
         let chosenMove: Move | null = null;
         const bookEntry = getOpeningForPosition(fen);
-        const bookMoveObj = getBookMove(fen);
+        const bookMoveObj = canUseOpeningBook(currentBot, currentGame.history().length)
+          ? getBookMove(fen)
+          : null;
 
         if (bookMoveObj) {
           const match = legalMoves.find((m) => m.san === bookMoveObj.san);
