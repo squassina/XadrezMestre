@@ -77,6 +77,7 @@ export default function App() {
   };
 
   const [newGameModalOpen, setNewGameModalOpen] = useState(false);
+  const [newGameModalMode, setNewGameModalMode] = useState<'full' | 'bot'>('full');
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const botAbortRef = useRef<AbortController | null>(null);
 
@@ -181,8 +182,6 @@ export default function App() {
     const isPlayerFlagged = flaggedColor === playerColor;
     const winner = isPlayerFlagged ? 'bot' : 'player';
 
-    if (winner === 'player') {
-    }
 
     setGameOver({
       isOver: true,
@@ -286,8 +285,6 @@ export default function App() {
     if (game.isCheckmate()) {
       const winner = lastPlayerColor === playerColor ? 'player' : 'bot';
       soundEffects.playVictory();
-      if (winner === 'player') {
-      }
 
       setGameOver({
         isOver: true,
@@ -663,7 +660,7 @@ export default function App() {
       <TopNav
         currentTab={activeTab}
         onSelectTab={setActiveTab}
-        onNewGame={() => setNewGameModalOpen(true)}
+        onNewGame={() => { setNewGameModalMode('full'); setNewGameModalOpen(true); }}
         boardTheme={boardTheme}
         onSelectTheme={handleSelectTheme}
         pieceSet={pieceSet}
@@ -712,9 +709,9 @@ export default function App() {
                     />
                   )}
                   <button
-                    onClick={() => setNewGameModalOpen(true)}
+                    onClick={() => { setNewGameModalMode('bot'); setNewGameModalOpen(true); }}
                     className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700 transition-colors"
-                    title="Configurações de Partida"
+                    title="Trocar adversário"
                   >
                     Trocar Bot
                   </button>
@@ -907,6 +904,10 @@ export default function App() {
         currentBotLevel={botLevel}
         currentTimeControl={timeControl}
         currentPieceSet={pieceSet}
+        mode={newGameModalMode}
+        currentPlayerColor={playerColor}
+        currentCoachInterruption={coachInterruption}
+        currentShowEvalBar={showEvalBar}
       />
 
       {/* Game Precision & Analysis Report Modal */}
