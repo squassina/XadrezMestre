@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { AnalyzedMove, CoachFeedback } from '../types/chess';
 import { AlertTriangle, Lightbulb, RotateCcw, Eye, Sparkles, CheckCircle2, HelpCircle } from 'lucide-react';
+import { useI18n } from '../i18n';
 
 interface CoachPanelProps {
   currentMove: AnalyzedMove | null;
@@ -19,13 +20,14 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
   onRequestDetailedAiHelp,
   isLoadingAiHelp = false,
 }) => {
+  const { t } = useI18n();
   const [dismissed, setDismissed] = useState(false);
 
   if (!currentMove) {
     return (
       <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-4 flex flex-col items-center justify-center text-center text-slate-400 min-h-[170px]">
         <Sparkles className="w-8 h-8 text-amber-400/60 mb-2" />
-        <h3 className="text-sm font-semibold text-slate-200">Treinador em Tempo Real Ativo</h3>
+        <h3 className="text-sm font-semibold text-slate-200">{t('Treinador em Tempo Real Ativo')}</h3>
         <p className="text-xs text-slate-400 mt-1 max-w-sm">
           Jogue seus lances no tabuleiro. O treinador alertará imediatamente sobre gafes, peças penduradas e oportunidades táticas!
         </p>
@@ -91,14 +93,14 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
             {currentMove.coachFeedback.proTip && (
               <div className="mt-2 p-2 rounded bg-slate-950/60 border border-slate-800/80 text-amber-200/90 flex items-start gap-1.5">
                 <Lightbulb className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
-                <span><strong className="text-amber-300">Dica Prática:</strong> {currentMove.coachFeedback.proTip}</span>
+                <span><strong className="text-amber-300">{t('Dica Prática:')}</strong> {currentMove.coachFeedback.proTip}</span>
               </div>
             )}
             {currentMove.coachFeedback.keyQuestionsToAsk && currentMove.coachFeedback.keyQuestionsToAsk.length > 0 && (
               <div className="mt-2 text-[11px] text-slate-400 flex items-start gap-1">
                 <HelpCircle className="w-3 h-3 text-sky-400 shrink-0 mt-0.5" />
                 <span>
-                  <strong>Checklist Mental:</strong> {currentMove.coachFeedback.keyQuestionsToAsk.join(' · ')}
+                  <strong>{t('Checklist Mental:')}</strong> {currentMove.coachFeedback.keyQuestionsToAsk.join(' · ')}
                 </span>
               </div>
             )}
@@ -129,7 +131,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-semibold shadow-sm transition-all active:scale-95"
           >
             <RotateCcw className="w-3.5 h-3.5" />
-            <span>Desfazer & Tentar Novamente</span>
+            <span>{t('Desfazer & Tentar Novamente')}</span>
           </button>
 
           {currentMove.bestMoveSan && (
@@ -142,7 +144,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
               }`}
             >
               <Eye className="w-3.5 h-3.5" />
-              <span>{isShowingBestMoveArrow ? 'Ocultar Seta' : `Ver Lance Ideal (${currentMove.bestMoveSan})`}</span>
+              <span>{isShowingBestMoveArrow ? t('Ocultar Seta') : `${t('Ver Lance Ideal')} (${currentMove.bestMoveSan})`}</span>
             </button>
           )}
 
@@ -153,7 +155,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/40 text-indigo-200 text-xs font-medium ml-auto disabled:opacity-50"
             >
               <Sparkles className="w-3.5 h-3.5 text-indigo-300" />
-              <span>{isLoadingAiHelp ? 'Analisando...' : 'Pedir Explicação ao Mestre AI'}</span>
+              <span>{isLoadingAiHelp ? t('Analisando...') : t('Pedir Explicação ao Mestre AI')}</span>
             </button>
           )}
         </div>
