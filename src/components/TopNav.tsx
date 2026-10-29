@@ -85,12 +85,11 @@ export const TopNav: React.FC<TopNavProps> = ({
             className="text-xs bg-slate-900 border border-slate-700 hover:border-slate-600 text-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer shadow-xs"
             title="Escolha o estilo das peças"
           >
-            <option value="custom">Peças: SVGs Personalizados (Custom)</option>
-            <option value="cburnett">Peças: cburnett (Padrão)</option>
-            <option value="modern-minimalist">Peças: Modern-Minimalist (Clean)</option>
-            <option value="staunty">Peças: Staunty (Madeira & Marfim)</option>
-            <option value="merida">Peças: Merida (Clássico Europeu)</option>
-            <option value="alpha">Peças: Alpha (Minimalista)</option>
+            <option value="staunty">Peças: Staunty</option>
+            <option value="modern-minimalist">Peças: Modern-Minimalist</option>
+            <option value="merida">Peças: Merida</option>
+            <option value="alpha">Peças: Alpha</option>
+            <option value="cburnett">Peças: cburnett</option>
           </select>
 
           {/* Board Theme Selector */}
