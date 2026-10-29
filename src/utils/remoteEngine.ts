@@ -47,6 +47,7 @@ export interface BotSettings {
   fallbackTimeMs?: number;
   fallbackDepth?: number;
   variety?: number;
+  maxQuiescenceDepth?: number;
 }
 
 export const BOT_ENGINE: Record<BotLevel, BotSettings> = {
@@ -68,7 +69,7 @@ export function fallbackBotMove(
 
   const depth = Math.max(1, Math.min(10, settings.fallbackDepth ?? 4));
   const timeMs = Math.max(50, Math.min(2_000, settings.fallbackTimeMs ?? settings.movetime));
-  const result = searchBestMove(chess, depth, timeMs);
+  const result = searchBestMove(chess, depth, timeMs, settings.maxQuiescenceDepth ?? 8);
   const best = legalMoves.find((move) => move.san === result.san) ?? legalMoves[0];
   const variety = Math.max(0, Math.min(1, settings.variety ?? 0));
 
@@ -88,20 +89,21 @@ export function fallbackBotMove(
 
 export async function botMove(
   fen: string, settings: BotSettings, signal?: AbortSignal,
-): Promise<{ from: string; to: string; promotion?: string; source: 'stockfish' | 'interno' }> {
+): Promise<{ from: string; to: string; promotion?: string; source: 'stockfish' | 'interno'; lines: EngineLine[]; engine: string; ms: number }> {
   try {
-    const { depth: _depth, fallbackTimeMs: _fallbackTime, fallbackDepth: _fallbackDepth, variety: _variety, ...engineSettings } = settings;
-    const r = await post<RemoteSearch>('/api/engine/search', { fen, ...engineSettings }, Math.max(4_000, settings.movetime + 3_000), signal);
+    const { depth: _depth, fallbackTimeMs: _fallbackTime, fallbackDepth: _fallbackDepth, variety: _variety, maxQuiescenceDepth: _maxQ, ...engineSettings } = settings;
+    const r = await post<RemoteSearch>('/api/engine/search', { fen, multiPV: 3, ...engineSettings }, Math.max(4_000, settings.movetime + 3_000), signal);
     const chess = new Chess(fen);
     const move = chess.moves({ verbose: true }).find((candidate) =>
       candidate.from === r.bestMove.slice(0, 2) && candidate.to === r.bestMove.slice(2, 4) &&
       (candidate.promotion ?? '') === (r.bestMove[4] ?? '')
     );
     if (!move) throw new Error('motor remoto retornou lance ilegal');
-    return { from: move.from, to: move.to, promotion: move.promotion, source: 'stockfish' };
+    return { from: move.from, to: move.to, promotion: move.promotion, source: 'stockfish', lines: r.lines ?? [], engine: r.engine, ms: r.ms };
   } catch (error) {
     if (signal?.aborted) throw error;
-    return fallbackBotMove(fen, settings);
+    const fallback = fallbackBotMove(fen, settings);
+    return { ...fallback, lines: [{ multipv: 1, depth: settings.fallbackDepth ?? 4, pv: [fallback.from + fallback.to + (fallback.promotion ?? '')] }], engine: 'Motor interno (fallback)', ms: settings.fallbackTimeMs ?? settings.movetime };
   }
 }
 
@@ -116,3 +118,17 @@ export async function analyzeMoveRemote(
 }
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
+/** Converte uma variante UCI em notação SAN para exibição ao jogador. */
+export function uciPvToSan(fen: string, pv: string[]): string[] {
+  const chess = new Chess(fen);
+  const san: string[] = [];
+  for (const uci of pv) {
+    if (!/^[a-h][1-8][a-h][1-8][qrbn]?$/.test(uci)) break;
+    try {
+      const move = chess.move({ from: uci.slice(0, 2) as any, to: uci.slice(2, 4) as any, promotion: uci[4] });
+      san.push(move.san);
+    } catch { break; }
+  }
+  return san;
+}
