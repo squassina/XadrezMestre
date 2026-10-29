@@ -529,6 +529,9 @@ const translations: Record<string, string> = {
   "Pretas defendem a fortaleza d5 ou aceitam a captura para focar no contra-ataque rápido.": "Black defends the d5 stronghold or accepts the capture to focus on quick counterplay.",
   "Pretas concedem o centro temporariamente para atacá-lo pelos flancos com peças e rupturas.": "Black temporarily concedes the center to attack it from the flanks with pieces and pawn breaks.",
   "Abertura hipermoderna com grande potencial de transposição para d4 ou c4.": "A hypermodern opening with strong transposition potential into d4 or c4.",
+  "Melhor lance": "Best move",
+  "Você jogou": "You played",
+  "Livro Teórico": "Opening Book",
 };
 
 const I18nContext = createContext<TranslationContextValue | null>(null);
