@@ -1,7 +1,7 @@
 import React from 'react';
 import { PieceSymbol, Color } from 'chess.js';
 
-export type PieceSet = 'staunty' | 'modern-minimalist' | 'merida' | 'alpha' | 'cburnett';
+export type PieceSet = 'staunty' | 'modern' | 'merida' | 'alpha';
 
 // Caminho base considerando a subpasta base do Vite (ex: /XadrezMestre/pieces)
 const DEFAULT_BASE_PATH = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/pieces`;
