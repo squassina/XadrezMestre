@@ -390,10 +390,10 @@ export default function App() {
         }
 
         const planPv = planLines.map((line) => ({ ...line, pv: uciPvToSan(fen, line.pv).slice(0, 6) }));
-        if (bookMoveObj && chosenMove) {
+        if (bookMoveObj && chosenMove && planEngine === 'Livro de aberturas') {
           planPv.unshift({ multipv: 1, depth: 0, pv: [chosenMove.san], cp: undefined, mate: undefined });
         }
-        setThinkingPlan({ status: 'ready', engine: planEngine, ms: planMs, lines: planPv, source: bookMoveObj ? 'book' : planEngine.includes('interno') ? 'interno' : 'stockfish' });
+        setThinkingPlan({ status: 'ready', engine: planEngine, ms: planMs, lines: planPv, source: bookMoveObj && planEngine === 'Livro de aberturas' ? 'book' : planEngine.includes('interno') ? 'interno' : 'stockfish' });
 
         const chessBeforeBot = new Chess(fen);
         const newGame = new Chess(fen);
@@ -789,7 +789,7 @@ export default function App() {
                       <div key={String(line.multipv) + '-' + line.pv.join('-')} className="rounded-lg bg-slate-950/70 border border-slate-800 px-2.5 py-2">
                         <div className="flex items-center justify-between gap-2 mb-1">
                           <span className="text-[10px] font-semibold text-amber-300">{line.multipv === 1 ? 'Plano principal' : 'Alternativa ' + line.multipv}</span>
-                          <span className="text-[10px] text-slate-500">{line.depth ? 'Profundidade ' + line.depth : 'Livro de aberturas'}{line.mate !== undefined ? ' · mate em ' + line.mate : line.cp !== undefined ? ' · avaliação ' + (line.cp / 100).toFixed(2) : ''}</span>
+                          <span className="text-[10px] text-slate-500">{line.depth ? 'Profundidade ' + line.depth : 'Livro de aberturas'}{line.mate !== undefined ? ' · mate em ' + line.mate : line.cp !== undefined ? ' · avaliação ' + (line.cp / 100).toFixed(2) + ' (lado a jogar)' : ''}</span>
                         </div>
                         <p className="font-mono text-[11px] leading-relaxed text-slate-200 break-words">{line.pv.join(' ') || 'Variante indisponível'}</p>
                       </div>
