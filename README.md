@@ -133,6 +133,16 @@ A qualidade do XadrezMestre pode ser aprimorada continuamente em quatro frentes:
 
 Esses pontos são oportunidades de evolução; não significam que todas essas melhorias já estejam implementadas.
 
+## 📚 Créditos, peças e licenças de terceiros
+
+Os conjuntos de peças de xadrez distribuídos em `public/pieces/` foram obtidos/adaptados a partir do repositório de código aberto **[Lichess `lila`](https://github.com/lichess-org/lila)**. Consulte também o [inventário oficial de direitos autorais e licenças do Lichess (`COPYING.md`)](https://github.com/lichess-org/lila/blob/master/COPYING.md), que discrimina autores e condições por conjunto/arquivo. Os arquivos de terceiros continuam sujeitos às suas licenças originais; a licença MIT deste projeto não as substitui.
+
+**Atenção antes de redistribuir ou usar comercialmente:** o inventário upstream lista o conjunto `cburnett` como GPL-2.0-or-later, `merida` como GPL-2.0-or-later e `alpha` como “free for personal non commercial use”. Portanto, não presuma que todos os conjuntos podem ser usados comercialmente sob a licença MIT do XadrezMestre. O conjunto `alpha` deve ser substituído ou ter sua autorização/licença esclarecida antes de qualquer uso comercial. Para o conjunto local `staunty`, confirme a origem e a licença específica dos arquivos: o nome da pasta, por si só, não comprova que corresponda ao conjunto “Staunton” listado no inventário upstream.
+
+O motor de xadrez usado no backend é **[Stockfish](https://github.com/official-stockfish/Stockfish)**, software livre sob a **GNU GPL v3**. O `Dockerfile` baixa o binário oficial da versão `sf_18` e o instala em `/usr/local/bin/stockfish`; a rota do backend usa esse executável para busca e análise. Ao distribuir uma imagem ou binário que inclua Stockfish, cumpra a GPLv3, incluindo a licença e o código-fonte correspondente (ou uma referência válida para obtê-lo), conforme as exigências aplicáveis. Se o serviço remoto não estiver disponível, o frontend possui um mecanismo interno de fallback, que não é Stockfish.
+
+Veja o arquivo [`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md) para um resumo dos componentes e avisos de licença.
+
 ## 🛠️ Tecnologias e desenvolvimento
 
 O projeto utiliza React, TypeScript e Vite na interface, chess.js para regras e estado da partida, Tailwind CSS para estilos e Framer Motion para animações. O código também inclui lógica de avaliação local e integração com um mecanismo remoto para apoiar as jogadas e análises.
