@@ -119,7 +119,7 @@ Recent student mistakes: ${JSON.stringify(userMistakeHistory || [])}.
 Return immediate, constructive feedback as strict JSON:
 {
   "explanation": "A clear, friendly 2–3 sentence explanation of why ${san} was problematic and why ${bestSan} was better.",
-  "tacticalConcept": "Nome conciso do conceito de xadrez em português (Ex: 'Peça Pendurada', 'Cravada Relativa', 'Controle Central', 'Rei Desprotegido')",
+  "tacticalConcept": "Concise chess concept name in the requested language",
   "proTip": "A memorable practical tip the student can apply in the next game",
   "keyQuestionsToAsk": ["Mental checklist question 1", "Question 2"]
 }`;
@@ -179,9 +179,9 @@ app.post('/api/coach/diagnostics', async (req, res) => {
     }
 
     const prompt = `Analyze this chess player's mistake profile. Respond in ${language === 'en' ? 'English' : 'Brazilian Portuguese'}:
-Partidas jogadas: ${totalGames}
-Estatísticas de erros: ${JSON.stringify(errorCounts)}
-Estatísticas gerais: ${JSON.stringify(stats)}
+Games played: ${totalGames}
+Mistake statistics: ${JSON.stringify(errorCounts)}
+General statistics: ${JSON.stringify(stats)}
 
 Return an educational diagnosis as strict JSON:
 {
