@@ -15,6 +15,7 @@ interface NewGameModalProps {
     showEvalBar: boolean;
     timeControl: TimeControl;
     pieceSet?: PieceSet;
+    maxQuiescenceDepth: number;
   }) => void;
   currentBotLevel: BotLevel;
   currentTimeControl: TimeControl;
@@ -23,6 +24,7 @@ interface NewGameModalProps {
   currentPlayerColor?: 'w' | 'b';
   currentCoachInterruption?: boolean;
   currentShowEvalBar?: boolean;
+  currentMaxQuiescenceDepth?: number;
   gameInProgress?: boolean;
 }
 
@@ -37,6 +39,7 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
   currentPlayerColor = 'w',
   currentCoachInterruption = true,
   currentShowEvalBar = true,
+  currentMaxQuiescenceDepth = 6,
   gameInProgress = false,
 }) => {
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -48,6 +51,7 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
   const [selectedPieceSet, setSelectedPieceSet] = useState<PieceSet>(currentPieceSet);
   const [coachInterruption, setCoachInterruption] = useState(currentCoachInterruption);
   const [showEvalBar, setShowEvalBar] = useState(currentShowEvalBar);
+  const [maxQuiescenceDepth, setMaxQuiescenceDepth] = useState(currentMaxQuiescenceDepth);
 
   // Sincroniza o estado interno com as props ao abrir o modal
   useEffect(() => {
@@ -56,10 +60,11 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
       setSelectedColor(currentPlayerColor);
       setCoachInterruption(currentCoachInterruption);
       setShowEvalBar(currentShowEvalBar);
+      setMaxQuiescenceDepth(currentMaxQuiescenceDepth);
       setSelectedTimeControl(currentTimeControl || DEFAULT_TIME_CONTROL);
       setSelectedPieceSet(currentPieceSet || 'cburnett');
     }
-  }, [isOpen, currentBotLevel, currentTimeControl, currentPieceSet, currentPlayerColor, currentCoachInterruption, currentShowEvalBar]);
+  }, [isOpen, currentBotLevel, currentTimeControl, currentPieceSet, currentPlayerColor, currentCoachInterruption, currentShowEvalBar, currentMaxQuiescenceDepth]);
 
   useEffect(() => {
     if (isOpen) {
@@ -107,6 +112,7 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
       showEvalBar: mode === 'bot' ? currentShowEvalBar : showEvalBar,
       timeControl: mode === 'bot' ? currentTimeControl : selectedTimeControl,
       pieceSet: mode === 'bot' ? currentPieceSet : selectedPieceSet,
+      maxQuiescenceDepth,
     });
     onClose();
   };
@@ -219,6 +225,32 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
               );
             })}
           </div>
+        </div>
+
+
+        {/* Tuning of tactical search */}
+        <div className="space-y-2 pt-3 border-t border-slate-800">
+          <div className="flex items-center justify-between gap-3">
+            <label htmlFor="quiescence-depth" className="text-xs font-semibold text-slate-300">
+              Profundidade tática (maxQuiescenceDepth)
+            </label>
+            <span className="text-xs font-mono font-bold text-amber-400">{maxQuiescenceDepth}</span>
+          </div>
+          <input
+            id="quiescence-depth"
+            type="range"
+            min={1}
+            max={12}
+            step={1}
+            value={maxQuiescenceDepth}
+            onChange={(e) => setMaxQuiescenceDepth(Number(e.target.value))}
+            className="w-full accent-amber-500"
+            aria-describedby="quiescence-depth-help"
+          />
+          <div className="flex justify-between text-[10px] text-slate-500"><span>Mais fácil / rápido</span><span>Mais difícil / tático</span></div>
+          <p id="quiescence-depth-help" className="text-[11px] text-slate-400 leading-relaxed">
+            Ajusta a busca tática adicional. O motor interno respeita este limite; com Stockfish remoto, o valor também ajusta o nível de força solicitado, enquanto o Stockfish controla sua própria busca quiescente.
+          </p>
         </div>
 
         {mode === 'full' && (
