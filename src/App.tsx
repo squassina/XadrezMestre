@@ -51,7 +51,7 @@ const DEFAULT_STATS: PlayerStats = {
 };
 
 export default function App() {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const [activeTab, setActiveTab] = useState<NavTab>('game');
   const [boardTheme, setBoardTheme] = useState<BoardTheme>(() => {
     try {
@@ -642,6 +642,7 @@ export default function App() {
           evalDiff: currentMove.evalDiff,
           moveNumber: currentMove.moveNumber,
           userMistakeHistory: playerStats.recentMistakes.slice(0, 4),
+          language,
         }),
       });
 
