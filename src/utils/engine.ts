@@ -1,11 +1,10 @@
 import { Chess, Square, PieceSymbol, Color, Move } from 'chess.js';
 import { AnalyzedMove, BlunderCategory, MoveQuality, BotLevel, BotConfig } from '../types/chess';
-
-import { getOpeningForPosition, getBookMove, OPENING_BOOK, OpeningEntry } from '../data/openings';
+import { getOpeningForPosition, getBookMove, OPENING_BOOK } from '../data/openings';
 
 export { getOpeningForPosition, getBookMove, OPENING_BOOK };
 
-// Standard piece values in centipawns
+// Valores padrão das peças em centipawns
 export const PIECE_VALUES: Record<PieceSymbol, number> = {
   p: 100,
   n: 320,
@@ -15,7 +14,7 @@ export const PIECE_VALUES: Record<PieceSymbol, number> = {
   k: 20000,
 };
 
-// Piece Square Tables (PST) - from White's perspective (a8 is index 0)
+// Tabelas de Posição das Peças (PST) - Perspectiva das Brancas
 const PAWN_TABLE = [
    0,  0,  0,  0,  0,  0,  0,  0,
   50, 50, 50, 50, 50, 50, 50, 50,
@@ -82,7 +81,18 @@ const KING_TABLE = [
    20, 30, 10,  0,  0, 10, 30, 20
 ];
 
-// Transposition Cache for Fast Evaluation
+const KING_ENDGAME_TABLE = [
+  -50, -40, -30, -20, -20, -30, -40, -50,
+  -30, -20, -10,   0,   0, -10, -20, -30,
+  -30, -10,  20,  30,  30,  20, -10, -30,
+  -30, -10,  30,  40,  40,  30, -10, -30,
+  -30, -10,  30,  40,  40,  30, -10, -30,
+  -30, -10,  20,  30,  30,  20, -10, -30,
+  -30, -30,   0,   0,   0,   0, -30, -30,
+  -50, -30, -30, -30, -30, -30, -30, -50
+];
+
+// Cache de Transposição
 const evalCache = new Map<string, number>();
 const bestMoveCache = new Map<string, { move: Move | null; score: number }>();
 const MAX_CACHE_SIZE = 5000;
@@ -109,9 +119,158 @@ function setCachedBestMove(key: string, result: { move: Move | null; score: numb
   bestMoveCache.set(key, result);
 }
 
-/**
- * Fast static evaluation from White's perspective (+ means White is winning, - means Black)
- */
+export const BOT_CONFIGS: Record<BotLevel, BotConfig> = {
+  beginner: {
+    id: 'beginner',
+    name: 'Sofia Novata',
+    title: 'Iniciante',
+    elo: 800,
+    depth: 1,
+    maxQuiescenceDepth: 2,
+    randomness: 0.35,
+    blunderChance: 0.25,
+    avatar: '♟️',
+    description: 'Comete erros táticos simples e deixa peças penduradas com frequência.',
+  },
+  intermediate: {
+    id: 'intermediate',
+    name: 'Carlos Estrategista',
+    title: 'Intermediário',
+    elo: 1350,
+    depth: 2,
+    maxQuiescenceDepth: 4,
+    randomness: 0.10,
+    blunderChance: 0.04,
+    avatar: '♞',
+    description: 'Não entrega peças facilmente em trocas simples, mas falha em planos de longo prazo.',
+  },
+  advanced: {
+    id: 'advanced',
+    name: 'Dra. Helena',
+    title: 'Avançado',
+    elo: 1750,
+    depth: 3,
+    maxQuiescenceDepth: 6,
+    randomness: 0.02,
+    blunderChance: 0.0,
+    avatar: '♜',
+    description: 'Cálculo apurado de trocas táticas e forte pressão em estruturas de peões.',
+  },
+  master: {
+    id: 'master',
+    name: 'GM Mikhail',
+    title: 'Mestre',
+    elo: 2200,
+    depth: 4,
+    maxQuiescenceDepth: 8,
+    randomness: 0.0,
+    blunderChance: 0.0,
+    avatar: '♛',
+    description: 'Cálculo profundo e implacável em combinações táticas longas.',
+  },
+};
+
+function isEndgame(chess: Chess): boolean {
+  const board = chess.board();
+  let nonPawnMaterial = 0;
+
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const piece = board[r][c];
+      if (piece && piece.type !== 'p' && piece.type !== 'k') {
+        nonPawnMaterial += PIECE_VALUES[piece.type];
+      }
+    }
+  }
+  return nonPawnMaterial <= 2600;
+}
+
+function evaluatePawnStructure(chess: Chess): number {
+  const board = chess.board();
+  let score = 0;
+
+  const whitePawnsPerCol = new Array(8).fill(0);
+  const blackPawnsPerCol = new Array(8).fill(0);
+  const whitePawns: { r: number; c: number }[] = [];
+  const blackPawns: { r: number; c: number }[] = [];
+
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const piece = board[r][c];
+      if (piece && piece.type === 'p') {
+        if (piece.color === 'w') {
+          whitePawnsPerCol[c]++;
+          whitePawns.push({ r, c });
+        } else {
+          blackPawnsPerCol[c]++;
+          blackPawns.push({ r, c });
+        }
+      }
+    }
+  }
+
+  // 1. Peões Dobrados
+  for (let c = 0; c < 8; c++) {
+    if (whitePawnsPerCol[c] > 1) score -= (whitePawnsPerCol[c] - 1) * 20;
+    if (blackPawnsPerCol[c] > 1) score += (blackPawnsPerCol[c] - 1) * 20;
+  }
+
+  // 2. Peões Isolados
+  for (let c = 0; c < 8; c++) {
+    const left = c - 1;
+    const right = c + 1;
+
+    const whiteHasAdj = (left >= 0 && whitePawnsPerCol[left] > 0) || (right < 8 && whitePawnsPerCol[right] > 0);
+    if (whitePawnsPerCol[c] > 0 && !whiteHasAdj) {
+      score -= 15 * whitePawnsPerCol[c];
+    }
+
+    const blackHasAdj = (left >= 0 && blackPawnsPerCol[left] > 0) || (right < 8 && blackPawnsPerCol[right] > 0);
+    if (blackPawnsPerCol[c] > 0 && !blackHasAdj) {
+      score += 15 * blackPawnsPerCol[c];
+    }
+  }
+
+  // 3. Peões Passados
+  for (const p of whitePawns) {
+    let isPassed = true;
+    for (let checkCol = Math.max(0, p.c - 1); checkCol <= Math.min(7, p.c + 1); checkCol++) {
+      for (let checkRow = 0; checkRow < p.r; checkRow++) {
+        const piece = board[checkRow][checkCol];
+        if (piece && piece.color === 'b' && piece.type === 'p') {
+          isPassed = false;
+          break;
+        }
+      }
+      if (!isPassed) break;
+    }
+    if (isPassed) {
+      const rankBonus = (7 - p.r) * 15;
+      score += 20 + rankBonus;
+    }
+  }
+
+  for (const p of blackPawns) {
+    let isPassed = true;
+    for (let checkCol = Math.max(0, p.c - 1); checkCol <= Math.min(7, p.c + 1); checkCol++) {
+      for (let checkRow = p.r + 1; checkRow < 8; checkRow++) {
+        const piece = board[checkRow][checkCol];
+        if (piece && piece.color === 'w' && piece.type === 'p') {
+          isPassed = false;
+          break;
+        }
+      }
+      if (!isPassed) break;
+    }
+    if (isPassed) {
+      const rankBonus = p.r * 15;
+      score -= (20 + rankBonus);
+    }
+  }
+
+  return score;
+}
+
 export function evaluateBoard(chess: Chess): number {
   const fen = chess.fen();
   const cached = getCachedEval(fen);
@@ -129,6 +288,10 @@ export function evaluateBoard(chess: Chess): number {
 
   let score = 0;
   const board = chess.board();
+  const inEndgame = isEndgame(chess);
+
+  let whiteBishops = 0;
+  let blackBishops = 0;
 
   for (let r = 0; r < 8; r++) {
     const row = board[r];
@@ -142,16 +305,26 @@ export function evaluateBoard(chess: Chess): number {
       switch (piece.type) {
         case 'p': pstVal = PAWN_TABLE[idx]; break;
         case 'n': pstVal = KNIGHT_TABLE[idx]; break;
-        case 'b': pstVal = BISHOP_TABLE[idx]; break;
+        case 'b':
+          pstVal = BISHOP_TABLE[idx];
+          if (piece.color === 'w') whiteBishops++; else blackBishops++;
+          break;
         case 'r': pstVal = ROOK_TABLE[idx]; break;
         case 'q': pstVal = QUEEN_TABLE[idx]; break;
-        case 'k': pstVal = KING_TABLE[idx]; break;
+        case 'k':
+          pstVal = inEndgame ? KING_ENDGAME_TABLE[idx] : KING_TABLE[idx];
+          break;
       }
 
       const totalVal = PIECE_VALUES[piece.type] + pstVal;
       score += piece.color === 'w' ? totalVal : -totalVal;
     }
   }
+
+  if (whiteBishops >= 2) score += 50;
+  if (blackBishops >= 2) score -= 50;
+
+  score += evaluatePawnStructure(chess);
 
   if (chess.inCheck()) {
     score += chess.turn() === 'w' ? -35 : 35;
@@ -161,9 +334,6 @@ export function evaluateBoard(chess: Chess): number {
   return score;
 }
 
-/**
- * Fast Move Ordering with MVV-LVA (Most Valuable Victim - Least Valuable Attacker)
- */
 function sortMoves(moves: Move[]): Move[] {
   return moves.sort((a, b) => {
     let aScore = 0;
@@ -183,14 +353,100 @@ function sortMoves(moves: Move[]): Move[] {
   });
 }
 
-/**
- * Minimax with Alpha-Beta Pruning and Move Ordering
- */
+export function quiescenceSearch(
+  chess: Chess,
+  alpha: number,
+  beta: number,
+  isWhite: boolean,
+  maxDepth: number = 4
+): number {
+  const standPat = evaluateBoard(chess);
+
+  if (isWhite) {
+    if (standPat >= beta) return beta;
+    if (standPat > alpha) alpha = standPat;
+  } else {
+    if (standPat <= alpha) return alpha;
+    if (standPat < beta) beta = standPat;
+  }
+
+  if (maxDepth <= 0 || chess.isGameOver()) {
+    return standPat;
+  }
+
+  const tacticalMoves = sortMoves(
+    chess.moves({ verbose: true }).filter((m) => m.captured || m.promotion)
+  );
+
+  for (const move of tacticalMoves) {
+    chess.move(move);
+    const score = quiescenceSearch(chess, alpha, beta, !isWhite, maxDepth - 1);
+    chess.undo();
+
+    if (isWhite) {
+      if (score >= beta) return beta;
+      if (score > alpha) alpha = score;
+    } else {
+      if (score <= alpha) return alpha;
+      if (score < beta) beta = score;
+    }
+  }
+
+  return isWhite ? alpha : beta;
+}
+
+export function minimax(
+  chess: Chess,
+  depth: number,
+  alpha: number,
+  beta: number,
+  isWhite: boolean,
+  maxQuiescenceDepth: number = 4
+): number {
+  if (chess.isGameOver()) {
+    return evaluateBoard(chess);
+  }
+
+  if (depth <= 0) {
+    return quiescenceSearch(chess, alpha, beta, isWhite, maxQuiescenceDepth);
+  }
+
+  const moves = sortMoves(chess.moves({ verbose: true }));
+  if (moves.length === 0) {
+    return evaluateBoard(chess);
+  }
+
+  if (isWhite) {
+    let maxEval = -Infinity;
+    for (const move of moves) {
+      chess.move(move);
+      const evaluation = minimax(chess, depth - 1, alpha, beta, false, maxQuiescenceDepth);
+      chess.undo();
+      maxEval = Math.max(maxEval, evaluation);
+      alpha = Math.max(alpha, evaluation);
+      if (beta <= alpha) break;
+    }
+    return maxEval;
+  } else {
+    let minEval = Infinity;
+    for (const move of moves) {
+      chess.move(move);
+      const evaluation = minimax(chess, depth - 1, alpha, beta, true, maxQuiescenceDepth);
+      chess.undo();
+      minEval = Math.min(minEval, evaluation);
+      beta = Math.min(beta, evaluation);
+      if (beta <= alpha) break;
+    }
+    return minEval;
+  }
+}
+
 export function findBestMove(
   chess: Chess,
-  depth: number = 2
+  depth: number = 2,
+  maxQuiescenceDepth: number = 4
 ): { move: Move | null; score: number } {
-  const cacheKey = `${chess.fen()}_d${depth}`;
+  const cacheKey = `${chess.fen()}_d${depth}_q${maxQuiescenceDepth}`;
   const cached = getCachedBestMove(cacheKey);
   if (cached) return cached;
 
@@ -203,12 +459,10 @@ export function findBestMove(
     return res;
   }
 
-  // 1. Check Opening Book Library for first 10-15 moves (ply <= 30)
   const historyLen = chess.history().length;
   if (historyLen <= 30) {
     const opening = getOpeningForPosition(chess.fen());
     if (opening && opening.moves.length > 0) {
-      // Find top book main-line move
       const topBookMove = opening.moves[0];
       const matched = moves.find((m) => m.san === topBookMove.san);
       if (matched) {
@@ -226,7 +480,7 @@ export function findBestMove(
 
   for (const move of moves) {
     chess.move(move);
-    const score = minimax(chess, depth - 1, alpha, beta, !isWhite);
+    const score = minimax(chess, depth - 1, alpha, beta, !isWhite, maxQuiescenceDepth);
     chess.undo();
 
     if (isWhite) {
@@ -253,54 +507,6 @@ export function findBestMove(
   return result;
 }
 
-function minimax(
-  chess: Chess,
-  depth: number,
-  alpha: number,
-  beta: number,
-  isWhite: boolean
-): number {
-  if (depth <= 0 || chess.isGameOver()) {
-    return evaluateBoard(chess);
-  }
-
-  const moves = sortMoves(chess.moves({ verbose: true }));
-  if (moves.length === 0) {
-    return evaluateBoard(chess);
-  }
-
-  if (isWhite) {
-    let maxEval = -Infinity;
-    for (const move of moves) {
-      chess.move(move);
-      const evaluation = minimax(chess, depth - 1, alpha, beta, false);
-      chess.undo();
-      maxEval = Math.max(maxEval, evaluation);
-      alpha = Math.max(alpha, evaluation);
-      if (beta <= alpha) break;
-    }
-    return maxEval;
-  } else {
-    let minEval = Infinity;
-    for (const move of moves) {
-      chess.move(move);
-      const evaluation = minimax(chess, depth - 1, alpha, beta, true);
-      chess.undo();
-      minEval = Math.min(minEval, evaluation);
-      beta = Math.min(beta, evaluation);
-      if (beta <= alpha) break;
-    }
-    return minEval;
-  }
-}
-
-/**
- * Fast detection of common tactical blunder archetype
- */
-/**
- * Fast detection of common tactical blunder archetype
- * Corrected to avoid marking player's check as King Vulnerable.
- */
 export function detectBlunderCategory(
   chessBefore: Chess,
   chessAfter: Chess,
@@ -311,27 +517,22 @@ export function detectBlunderCategory(
   const moveNumber = chessAfter.history().length;
   const playerColor = playedMove.color;
 
-  // 1. King Vulnerability: Did the move allow immediate mate or dangerous checks against player's King?
   const opponentChecks = opponentMoves.filter((m) => m.san.includes('+') || m.san.includes('#'));
   const allowsMate = opponentMoves.some((m) => m.san.includes('#'));
-  
+
   if (allowsMate) {
     return 'Rei Vulnerável';
   }
 
-  // If opponent now has devastating checks against the player's king, or player moved king unnecessarily
   if (opponentChecks.length > 0) {
-    // If king was moved losing castling rights early or checks win material
     if (playedMove.piece === 'k' && moveNumber <= 30) {
       return 'Rei Vulnerável';
     }
-    // King shield pawn moved (e.g. f2/f3/f4/g4 or f7/f6/f5/g5)
     if (playedMove.piece === 'p' && (playedMove.from.startsWith('f') || playedMove.from.startsWith('g'))) {
       return 'Rei Vulnerável';
     }
   }
 
-  // 2. Check if a piece was left hanging (piece on destination or elsewhere is captured for free)
   const destPiece = chessAfter.get(playedMove.to);
   if (destPiece) {
     const capturesOnDest = opponentMoves.filter((m) => m.to === playedMove.to);
@@ -344,15 +545,12 @@ export function detectBlunderCategory(
     }
   }
 
-  // Check if any other piece of player is attacked undefended
   for (const oppMove of opponentMoves) {
     if (oppMove.captured && PIECE_VALUES[oppMove.captured] >= 300) {
-      // High value piece captured
       return 'Peça Pendurada';
     }
   }
 
-  // 3. Fork check: does opponent have a knight/pawn move attacking 2+ pieces?
   for (const oppMove of opponentMoves) {
     if (oppMove.piece === 'n' || oppMove.piece === 'p') {
       const testChess = new Chess(chessAfter.fen());
@@ -370,12 +568,10 @@ export function detectBlunderCategory(
     }
   }
 
-  // 4. Missed winning tactic
   if (bestMove && (bestMove.captured || bestMove.san.includes('+') || bestMove.san.includes('#'))) {
     return 'Oportunidade Tática Perdida';
   }
 
-  // 5. Opening slow development
   if (moveNumber <= 12 && (playedMove.piece === 'q' || playedMove.piece === 'k')) {
     return 'Desenvolvimento Lento';
   }
@@ -383,9 +579,6 @@ export function detectBlunderCategory(
   return 'Erro Posicional';
 }
 
-/**
- * Ultra-fast move classification (< 5ms)
- */
 export function analyzeMove(
   chessBefore: Chess,
   playedMove: Move,
@@ -394,10 +587,8 @@ export function analyzeMove(
   const playerColor = chessBefore.turn();
   const isWhite = playerColor === 'w';
 
-  // Fast evaluation of position before
   const { move: bestMove, score: evalBefore } = findBestMove(chessBefore, engineDepth);
 
-  // Fast evaluation of position after
   const chessAfter = new Chess(chessBefore.fen());
   chessAfter.move(playedMove);
   const evalAfter = evaluateBoard(chessAfter);
@@ -408,7 +599,6 @@ export function analyzeMove(
   let qualityLabel = 'Bom';
   let blunderCategory: BlunderCategory | undefined;
 
-  // Check if move is in opening book
   const openingBefore = getOpeningForPosition(chessBefore.fen());
   let isBookMove = false;
   let openingName = openingBefore?.name;
@@ -436,7 +626,7 @@ export function analyzeMove(
   const isExactBest = bestMove && playedMove.from === bestMove.from && playedMove.to === bestMove.to;
 
   if (isBookMove) {
-    // Already set as Livro Teórico
+    // Mantém Livro Teórico
   } else if (isExactBest) {
     quality = 'best';
     qualityLabel = 'Melhor Lance';
@@ -486,9 +676,6 @@ export function analyzeMove(
   };
 }
 
-/**
- * Asynchronous move analysis that does not block the UI thread
- */
 export function analyzeMoveAsync(
   chessBefore: Chess,
   playedMove: Move,
@@ -501,65 +688,11 @@ export function analyzeMoveAsync(
   });
 }
 
-/**
- * Bot configs for different skill levels
- */
-export const BOT_CONFIGS: Record<BotLevel, BotConfig> = {
-  beginner: {
-    id: 'beginner',
-    name: 'Sofia Novata',
-    title: 'Iniciante',
-    elo: 800,
-    depth: 1,
-    randomness: 0.35,
-    blunderChance: 0.25,
-    avatar: '♟️',
-    description: 'Comete gafes típicas de iniciantes, excelente para treinar punições táticas.',
-  },
-  intermediate: {
-    id: 'intermediate',
-    name: 'Carlos Estrategista',
-    title: 'Intermediário',
-    elo: 1350,
-    depth: 2,
-    randomness: 0.12,
-    blunderChance: 0.06,
-    avatar: '♞',
-    description: 'Joga com base em princípios sólidos, mas deixa escapar táticas de 2 lances.',
-  },
-  advanced: {
-    id: 'advanced',
-    name: 'Dra. Helena',
-    title: 'Avançado',
-    elo: 1750,
-    depth: 2,
-    randomness: 0.03,
-    blunderChance: 0.01,
-    avatar: '♜',
-    description: 'Cálculo apurado, rara perda de material e forte pressão posicional.',
-  },
-  master: {
-    id: 'master',
-    name: 'GM Mikhail',
-    title: 'Mestre',
-    elo: 2200,
-    depth: 3,
-    randomness: 0.0,
-    blunderChance: 0.0,
-    avatar: '♛',
-    description: 'Nível quase impecável. Exige precisão tática e profilaxia máxima.',
-  },
-};
-
-/**
- * Generate bot move based on chosen personality/rating
- */
 export function getBotMove(chess: Chess, botLevel: BotLevel): Move | null {
   const config = BOT_CONFIGS[botLevel];
   const moves = sortMoves(chess.moves({ verbose: true }));
   if (moves.length === 0) return null;
 
-  // 1. Play standard main-line moves from Opening Book during first 10-15 moves
   const ply = chess.history().length;
   if (ply <= 30) {
     const maxBookPly = config.id === 'beginner' ? 6 : config.id === 'intermediate' ? 14 : 26;
@@ -572,24 +705,21 @@ export function getBotMove(chess: Chess, botLevel: BotLevel): Move | null {
     }
   }
 
-  // Blunder chance for lower bots
   if (Math.random() < config.blunderChance && moves.length > 2) {
     const nonCaptureMoves = moves.filter((m) => !m.captured);
     const pool = nonCaptureMoves.length > 0 ? nonCaptureMoves : moves;
     return pool[Math.floor(Math.random() * pool.length)];
   }
 
-  // Random suboptimal choice
   if (Math.random() < config.randomness && moves.length > 1) {
     const subPool = moves.slice(0, Math.min(3, moves.length));
     return subPool[Math.floor(Math.random() * subPool.length)];
   }
 
-  const { move } = findBestMove(chess, config.depth);
+  const { move } = findBestMove(chess, config.depth, config.maxQuiescenceDepth);
   return move || moves[0];
 }
 
-// usado por search.ts (motor interno de reserva)
 export const PST: Record<PieceSymbol, number[]> = {
   p: PAWN_TABLE, n: KNIGHT_TABLE, b: BISHOP_TABLE, r: ROOK_TABLE, q: QUEEN_TABLE, k: KING_TABLE,
 };
