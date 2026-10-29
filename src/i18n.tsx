@@ -532,6 +532,7 @@ const translations: Record<string, string> = {
   "Melhor lance": "Best move",
   "Você jogou": "You played",
   "Livro Teórico": "Opening Book",
+  "permitindo desvantagem tática em relação a": "allowing a tactical disadvantage compared with",
 };
 
 const I18nContext = createContext<TranslationContextValue | null>(null);
