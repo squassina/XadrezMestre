@@ -18,7 +18,7 @@ export const MistakeAnalytics: React.FC<MistakeAnalyticsProps> = ({
   onSelectPuzzleCategory,
   onResetStats,
 }) => {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const [aiReport, setAiReport] = useState<{
     summary?: string;
     strengths?: string[];
@@ -58,6 +58,7 @@ export const MistakeAnalytics: React.FC<MistakeAnalyticsProps> = ({
           stats: playerStats,
           errorCounts: mistakeCounts,
           totalGames: playerStats.gamesPlayed,
+          language,
         }),
       });
       const data = await res.json();
@@ -101,7 +102,7 @@ export const MistakeAnalytics: React.FC<MistakeAnalyticsProps> = ({
             {playerStats.tacticalRating}
           </span>
           <span className="text-[10px] text-slate-400 mt-1">
-            {playerStats.puzzlesSolved} exercícios resolvidos
+            {playerStats.puzzlesSolved} {t('exercícios resolvidos')}
           </span>
         </div>
 
@@ -128,7 +129,7 @@ export const MistakeAnalytics: React.FC<MistakeAnalyticsProps> = ({
 
           {totalMistakes === 0 ? (
             <div className="p-6 text-center text-slate-400 text-xs italic bg-slate-950/40 rounded-xl border border-slate-800/80">
-              Jogue partidas com o treinador ativo. Suas gafes e erros táticos serão categorizados aqui automaticamente para você treinar com foco!
+              {t('Jogue partidas com o treinador ativo. Suas gafes e erros táticos serão categorizados aqui automaticamente para você treinar com foco!')}
             </div>
           ) : (
             <div className="space-y-3.5">
@@ -144,7 +145,7 @@ export const MistakeAnalytics: React.FC<MistakeAnalyticsProps> = ({
                           <span>{t(category)}</span>
                         </div>
                         <div className="flex items-center gap-2 font-mono text-slate-400">
-                          <span>{count} ocorrências</span>
+                          <span>{count} {t('ocorrências')}</span>
                           <span className="text-amber-400 font-semibold">{percent}%</span>
                         </div>
                       </div>
@@ -164,7 +165,7 @@ export const MistakeAnalytics: React.FC<MistakeAnalyticsProps> = ({
                           onClick={() => onSelectPuzzleCategory(category)}
                           className="text-amber-400 hover:text-amber-300 font-medium shrink-0 ml-2 hover:underline"
                         >
-                          Treinar Tática →
+                          {t('Treinar Tática →')}
                         </button>
                       </div>
                     </div>
@@ -216,7 +217,7 @@ export const MistakeAnalytics: React.FC<MistakeAnalyticsProps> = ({
               <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800/80 text-xs text-slate-400 flex flex-col items-center justify-center text-center gap-2 min-h-[180px]">
                 <HelpCircle className="w-6 h-6 text-slate-500" />
                 <p>
-                  Clique em <strong className="text-slate-300">"Atualizar Diagnóstico"</strong> para que o Grande Mestre analise suas partidas e elabore um roteiro de treino customizado.
+                  {t('Clique em')} <strong className="text-slate-300">"{t('Atualizar Diagnóstico')}"</strong>{t(' para que o Grande Mestre analise suas partidas e elabore um roteiro de treino customizado.')}
                 </p>
               </div>
             )}
@@ -227,7 +228,7 @@ export const MistakeAnalytics: React.FC<MistakeAnalyticsProps> = ({
               onClick={onResetStats}
               className="text-xs text-rose-400 hover:text-rose-300 underline"
             >
-              Zerar Histórico de Erros
+              {t('Zerar Histórico de Erros')}
             </button>
           </div>
         </div>
@@ -251,7 +252,7 @@ export const MistakeAnalytics: React.FC<MistakeAnalyticsProps> = ({
                   <span className="text-[10px] text-slate-500">{m.date}</span>
                 </div>
                 <div className="text-slate-300">
-                  Você jogou: <span className="font-mono font-bold text-rose-300">{m.movePlayed}</span>
+                  {t('Você jogou:')} <span className="font-mono font-bold text-rose-300">{m.movePlayed}</span>
                   <span className="mx-2 text-slate-500">|</span>
                   Melhor: <span className="font-mono font-bold text-emerald-400">{m.bestMove}</span>
                 </div>

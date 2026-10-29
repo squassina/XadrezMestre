@@ -36,7 +36,18 @@ const apiKey = process.env.GEMINI_API_KEY;
 const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
 // Heuristic fallback explanation generator for offline/fast response
-function generateFallbackExplanation(category: string, san: string, bestSan: string, evalDiff?: number) {
+function generateFallbackExplanation(category: string, san: string, bestSan: string, evalDiff?: number, language: string = 'pt-BR') {
+  if (language === 'en') {
+    switch (category) {
+      case 'Peça Pendurada': return { explanation: 'The move ' + san + ' left a piece undefended. The recommended move was ' + bestSan + '.', tacticalConcept: 'Material Safety', proTip: 'Before moving, check what attacks the destination square and whether you can recapture.', keyQuestionsToAsk: ['Is my piece defended?', 'Can the opponent gain tempo by attacking it?'] };
+      case 'Cravada Sofrida': return { explanation: 'The move ' + san + ' allowed a pin against a more valuable piece. ' + bestSan + ' kept the position safer.', tacticalConcept: 'Pins', proTip: 'Watch for pieces aligned on the same rank, file, or diagonal.', keyQuestionsToAsk: ['Are valuable pieces aligned?', 'Can I prevent or break the pin?'] };
+      case 'Garfo Sofrido': return { explanation: 'The move ' + san + ' allowed a double attack. The correct move was ' + bestSan + '.', tacticalConcept: 'Forks and Double Attacks', proTip: 'Look for knights and pawns attacking two targets at once.', keyQuestionsToAsk: ['Can the opponent attack two pieces in one move?'] };
+      case 'Rei Vulnerável': return { explanation: 'The move ' + san + ' weakened your king’s shelter or allowed dangerous checks. The ideal move was ' + bestSan + '.', tacticalConcept: 'King Safety', proTip: 'Prioritize king safety and castling.', keyQuestionsToAsk: ['Is my king safe from checks and open files?'] };
+      case 'Oportunidade Tática Perdida': return { explanation: 'You played ' + san + ', but ' + bestSan + ' offered a tactical chance to win material or attack decisively.', tacticalConcept: 'Forcing Moves', proTip: 'Calculate checks, captures, and direct threats first.', keyQuestionsToAsk: ['Do I have a useful check or capture?'] };
+      default: return { explanation: 'The move ' + san + ' gave up initiative and space. The engine’s best move was ' + bestSan + '.', tacticalConcept: 'Piece Activity', proTip: 'Improve your least active piece and control the center.', keyQuestionsToAsk: ['Which piece is least active?'] };
+    }
+  }
+  switch (category) {
   switch (category) {
     case 'Peça Pendurada':
       return {
@@ -86,7 +97,7 @@ function generateFallbackExplanation(category: string, san: string, bestSan: str
 // Coach Move Analysis Endpoint
 app.post('/api/coach/explain', async (req, res) => {
   try {
-    const { fen, san, bestSan, blunderCategory, evalDiff, moveNumber, userMistakeHistory } = req.body;
+    const { fen, san, bestSan, blunderCategory, evalDiff, moveNumber, userMistakeHistory, language = 'pt-BR' } = req.body;
 
     if (!san || !bestSan) {
       return res.status(400).json({ error: 'Parâmetros san e bestSan são obrigatórios.' });
@@ -94,23 +105,23 @@ app.post('/api/coach/explain', async (req, res) => {
 
     if (!ai) {
       // Return instant heuristic explanation
-      const fallback = generateFallbackExplanation(blunderCategory || 'Imprecisão', san, bestSan, evalDiff);
+      const fallback = generateFallbackExplanation(blunderCategory || 'Imprecisão', san, bestSan, evalDiff, language);
       return res.json({ ...fallback, isAiGenerated: false });
     }
 
-    const prompt = `Você é um Grande Mestre Internacional de Xadrez e treinador pedagógico paciente, entusiasmado e didático em língua portuguesa.
-O aluno jogou o lance "${san}", mas o melhor lance do motor era "${bestSan}".
-Classificação do erro: "${blunderCategory || 'Imprecisão/Gafe'}".
-Diferença de avaliação: ${evalDiff ? `${evalDiff} centipawns` : 'perda significativa'}.
-Posição atual FEN: ${fen || 'desconhecida'}.
-Histórico de erros recentes do aluno: ${JSON.stringify(userMistakeHistory || [])}.
+    const prompt = `You are an International Chess Grandmaster and a patient, enthusiastic chess coach. Respond in ${language === 'en' ? 'English' : 'Brazilian Portuguese'}.
+The student played "${san}", but the engine’s best move was "${bestSan}".
+Mistake classification: "${blunderCategory || 'Inaccuracy/Blunder'}".
+Evaluation difference: ${evalDiff ? `${evalDiff} centipawns` : 'significant loss'}.
+Current position FEN: ${fen || 'unknown'}.
+Recent student mistakes: ${JSON.stringify(userMistakeHistory || [])}.
 
-Forneça um feedback imediato e altamente construtivo em formato JSON rigoroso:
+Return immediate, constructive feedback as strict JSON:
 {
-  "explanation": "Explicação clara e amigável em 2-3 frases do motivo tático ou estratégico pelo qual ${san} foi problemático e por que ${bestSan} era superior.",
-  "tacticalConcept": "Nome conciso do conceito de xadrez em português (Ex: 'Peça Pendurada', 'Cravada Relativa', 'Controle Central', 'Rei Desprotegido')",
-  "proTip": "Uma dica prática memorável para o aluno aplicar já na próxima partida",
-  "keyQuestionsToAsk": ["Pergunta 1 de checklist mental antes do lance", "Pergunta 2"]
+  "explanation": "A clear, friendly 2–3 sentence explanation of why ${san} was problematic and why ${bestSan} was better.",
+  "tacticalConcept": "Concise chess concept name in the requested language",
+  "proTip": "A memorable practical tip the student can apply in the next game",
+  "keyQuestionsToAsk": ["Mental checklist question 1", "Question 2"]
 }`;
 
     const timeoutPromise = new Promise<never>((_, reject) =>
@@ -138,12 +149,12 @@ Forneça um feedback imediato e altamente construtivo em formato JSON rigoroso:
       }
     }
 
-    const fallback = generateFallbackExplanation(blunderCategory || 'Imprecisão', san, bestSan, evalDiff);
+    const fallback = generateFallbackExplanation(blunderCategory || 'Imprecisão', san, bestSan, evalDiff, language);
     return res.json({ ...fallback, isAiGenerated: false });
   } catch (error) {
     console.error('Error generating coach feedback:', error);
     const { san, bestSan, blunderCategory } = req.body;
-    const fallback = generateFallbackExplanation(blunderCategory || 'Imprecisão', san || '', bestSan || '');
+    const fallback = generateFallbackExplanation(blunderCategory || 'Imprecisão', san || '', bestSan || '', undefined, language);
     return res.json({ ...fallback, isAiGenerated: false });
   }
 });
@@ -151,32 +162,33 @@ Forneça um feedback imediato e altamente construtivo em formato JSON rigoroso:
 // Diagnostics endpoint to analyze user performance over multiple games
 app.post('/api/coach/diagnostics', async (req, res) => {
   try {
-    const { stats, errorCounts, totalGames } = req.body;
+    const { stats, errorCounts, totalGames, language = 'pt-BR' } = req.body;
 
     if (!ai) {
-      return res.json({
+      return res.json(language === 'en' ? {
+        summary: `You have played ${totalGames || 0} analyzed games. Focus on reducing undefended pieces and maintaining tactical awareness.`,
+        strengths: ['Enthusiasm for learning', 'Initiative in seeking active positions'],
+        weaknesses: Object.keys(errorCounts || {}).slice(0, 3),
+        recommendations: ['Solve five pin and fork puzzles daily.', 'Before each move, check for checks, captures, and threats.', 'Consider castling earlier to avoid attacks along the center files.']
+      } : {
         summary: `Você disputou ${totalGames || 0} partidas analisadas. Seu foco principal deve ser reduzir peças desprotegidas e manter a vigilância tática.`,
         strengths: ['Entusiasmo para aprender', 'Iniciativa em buscar posições ativas'],
         weaknesses: Object.keys(errorCounts || {}).slice(0, 3),
-        recommendations: [
-          'Resolva 5 exercícios de cravadas e garfos diariamente.',
-          'Antes de cada lance, faça o checklist: Xeques, Capturas, Ameaças.',
-          'Considere o roque mais cedo para evitar ataques na coluna central.'
-        ]
+        recommendations: ['Resolva 5 exercícios de cravadas e garfos diariamente.', 'Antes de cada lance, faça o checklist: Xeques, Capturas, Ameaças.', 'Considere o roque mais cedo para evitar ataques na coluna central.']
       });
     }
 
-    const prompt = `Analise o perfil de erros deste jogador de xadrez:
-Partidas jogadas: ${totalGames}
-Estatísticas de erros: ${JSON.stringify(errorCounts)}
-Estatísticas gerais: ${JSON.stringify(stats)}
+    const prompt = `Analyze this chess player's mistake profile. Respond in ${language === 'en' ? 'English' : 'Brazilian Portuguese'}:
+Games played: ${totalGames}
+Mistake statistics: ${JSON.stringify(errorCounts)}
+General statistics: ${JSON.stringify(stats)}
 
-Retorne um diagnóstico didático em JSON em português:
+Return an educational diagnosis as strict JSON:
 {
-  "summary": "Resumo de 2 frases do estilo e principal gargalo do aluno",
-  "strengths": ["Ponto forte 1", "Ponto forte 2"],
-  "weaknesses": ["Ponto fraco 1", "Ponto fraco 2"],
-  "recommendations": ["Recomendação prática 1", "Recomendação prática 2", "Recomendação prática 3"]
+  "summary": "Two-sentence summary of the player’s style and main improvement area",
+  "strengths": ["Strength 1", "Strength 2"],
+  "weaknesses": ["Weakness 1", "Weakness 2"],
+  "recommendations": ["Practical recommendation 1", "Recommendation 2", "Recommendation 3"]
 }`;
 
     const timeoutPromise = new Promise<never>((_, reject) =>
@@ -197,11 +209,10 @@ Retorne um diagnóstico didático em JSON em português:
     return res.json(parsed);
   } catch (err) {
     console.error('Error in diagnostics:', err);
-    return res.json({
-      summary: 'Continue praticando exercícios de tática para solidificar o reconhecimento de padrões.',
-      strengths: ['Dedicação aos treinos'],
-      weaknesses: ['Vigilância em peças desprotegidas'],
-      recommendations: ['Exercícios diários de cálculo de lances forçados']
+    return res.json(language === 'en' ? {
+      summary: 'Keep practicing tactical puzzles to strengthen pattern recognition.', strengths: ['Dedication to training'], weaknesses: ['Awareness of undefended pieces'], recommendations: ['Daily exercises calculating forcing moves']
+    } : {
+      summary: 'Continue praticando exercícios de tática para solidificar o reconhecimento de padrões.', strengths: ['Dedicação aos treinos'], weaknesses: ['Vigilância em peças desprotegidas'], recommendations: ['Exercícios diários de cálculo de lances forçados']
     });
   }
 });

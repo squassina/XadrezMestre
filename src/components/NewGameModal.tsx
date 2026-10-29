@@ -234,7 +234,7 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
         <div className="space-y-2 pt-3 border-t border-slate-800">
           <div className="flex items-center justify-between gap-3">
             <label htmlFor="quiescence-depth" className="text-xs font-semibold text-slate-300">
-              Profundidade tática (maxQuiescenceDepth)
+              {t('Profundidade tática (maxQuiescenceDepth)')}
             </label>
             <span className="text-xs font-mono font-bold text-amber-400">{maxQuiescenceDepth}</span>
           </div>
@@ -324,11 +324,11 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
           <div className="grid grid-cols-2 gap-2">
             <button type="button" onClick={() => setSelectedPieceSet('staunty')} aria-pressed={selectedPieceSet === 'staunty'} className={`p-2.5 rounded-xl border text-left flex items-center gap-3 ${selectedPieceSet === 'staunty' ? 'bg-amber-500/15 border-amber-500/60 ring-1 ring-amber-500/40 text-amber-200' : 'bg-slate-950/60 border-slate-800 text-slate-300'}`}>
               <div className="w-9 h-9 shrink-0 flex items-center justify-center p-0.5 bg-slate-900 rounded-lg border border-slate-800"><ChessPiece type="n" color="w" set="staunty" /></div>
-              <div className="flex flex-col"><span className="text-xs font-bold text-slate-100">Staunty</span><span className="text-[10px] text-slate-400">Clássico</span></div>
+              <div className="flex flex-col"><span className="text-xs font-bold text-slate-100">Staunty</span><span className="text-[10px] text-slate-400">{t('Clássico')}</span></div>
             </button>
             <button type="button" onClick={() => setSelectedPieceSet('merida')} aria-pressed={selectedPieceSet === 'merida'} className={`p-2.5 rounded-xl border text-left flex items-center gap-3 ${selectedPieceSet === 'merida' ? 'bg-amber-500/15 border-amber-500/60 ring-1 ring-amber-500/40 text-amber-200' : 'bg-slate-950/60 border-slate-800 text-slate-300'}`}>
               <div className="w-9 h-9 shrink-0 flex items-center justify-center p-0.5 bg-slate-900 rounded-lg border border-slate-800"><ChessPiece type="n" color="w" set="merida" /></div>
-              <div className="flex flex-col"><span className="text-xs font-bold text-slate-100">Merida</span><span className="text-[10px] text-slate-400">Tradicional</span></div>
+              <div className="flex flex-col"><span className="text-xs font-bold text-slate-100">Merida</span><span className="text-[10px] text-slate-400">{t('Tradicional')}</span></div>
             </button>
             <button type="button" onClick={() => setSelectedPieceSet('cburnett')}
               className={`p-2.5 rounded-xl border text-left flex items-center gap-3 transition-all ${
@@ -342,7 +342,7 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
               </div>
               <div className="flex flex-col">
                 <span className="text-xs font-bold text-slate-100">cburnett</span>
-                <span className="text-[10px] text-slate-400">Padrão de torneio clássico</span>
+                <span className="text-[10px] text-slate-400">{t('Padrão de torneio clássico')}</span>
               </div>
             </button>
 
@@ -361,7 +361,7 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
               </div>
               <div className="flex flex-col">
                 <span className="text-xs font-bold text-slate-100">Alpha</span>
-                <span className="text-[10px] text-slate-400">Estilo moderno estilizado</span>
+                <span className="text-[10px] text-slate-400">{t('Estilo moderno estilizado')}</span>
               </div>
             </button>
           </div>

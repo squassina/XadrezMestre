@@ -111,7 +111,7 @@ export const TacticalTrainer: React.FC<TacticalTrainerProps> = ({
         } else {
           // Computer makes the intermediate response
           setMoveStep(nextStep);
-          setStatusMessage('Muito bem! Calcule o próximo lance.');
+          setStatusMessage(t('Muito bem! Calcule o próximo lance.'));
 
           setTimeout(() => {
             const botSan = currentPuzzle.moves[nextStep];
@@ -129,7 +129,7 @@ export const TacticalTrainer: React.FC<TacticalTrainerProps> = ({
         // Incorrect move
         soundEffects.playBlunder();
         setPuzzleStatus('failed');
-        setStatusMessage(`Lance ${moveResult.san} não é a melhor continuação tática. Tente novamente!`);
+        setStatusMessage(t('Lance ') + moveResult.san + t(' não é a melhor continuação tática. Tente novamente!'));
 
         // Record failure in stats
         onUpdateStats({
@@ -153,7 +153,7 @@ export const TacticalTrainer: React.FC<TacticalTrainerProps> = ({
     });
 
     setPuzzleStatus('solved');
-    setStatusMessage('Sensacional! Tática resolvida com precisão.');
+    setStatusMessage(t('Sensacional! Tática resolvida com precisão.'));
 
     const newStreak = playerStats.streak + 1;
     const newBestStreak = Math.max(playerStats.bestStreak, newStreak);
@@ -180,7 +180,7 @@ export const TacticalTrainer: React.FC<TacticalTrainerProps> = ({
   const handleShowHint = () => {
     setHintUsed(true);
     const expectedSan = currentPuzzle.moves[moveStep];
-    setStatusMessage(`Dica: ${currentPuzzle.hint} (Procure o lance ${expectedSan.charAt(0)})`);
+    setStatusMessage(t('Dica:') + ' ' + t(currentPuzzle.hint) + ' (' + t('Procure o lance') + ' ' + expectedSan.charAt(0) + ')');
   };
 
   const handleShowSolution = () => {
@@ -195,7 +195,7 @@ export const TacticalTrainer: React.FC<TacticalTrainerProps> = ({
           color: 'green',
         },
       ]);
-      setStatusMessage(`Solução recomendada: ${currentPuzzle.moves.join(' → ')}`);
+      setStatusMessage(t('Solução recomendada:') + ' ' + currentPuzzle.moves.join(' → '));
     }
   };
 
@@ -204,9 +204,9 @@ export const TacticalTrainer: React.FC<TacticalTrainerProps> = ({
     { id: 'weakness', label: '🎯 Seus Pontos Fracos' },
     { id: 'Garfo Sofrido', label: 'Garfos' },
     { id: 'Cravada Sofrida', label: 'Cravadas' },
-    { id: 'Peça Pendurada', label: 'Peças Penduradas' },
-    { id: 'Rei Vulnerável', label: 'Segurança do Rei' },
-    { id: 'Oportunidade Tática Perdida', label: 'Ataques Forçados' },
+    { id: 'Peça Pendurada', label: t('Peças Penduradas') },
+    { id: 'Rei Vulnerável', label: t('Segurança do Rei') },
+    { id: 'Oportunidade Tática Perdida', label: t('Ataques Forçados') },
   ];
 
   return (
@@ -218,12 +218,12 @@ export const TacticalTrainer: React.FC<TacticalTrainerProps> = ({
           <div className="flex items-center gap-2">
             <span className={`w-3 h-3 rounded-full border ${currentPuzzle.playerColor === 'w' ? 'bg-white border-slate-400' : 'bg-slate-950 border-slate-600'}`} />
             <span className="font-semibold text-slate-200">
-              {currentPuzzle.playerColor === 'w' ? 'Brancas jogam e vencem' : 'Pretas jogam e vencem'}
+              {t(currentPuzzle.playerColor === 'w' ? 'Brancas jogam e vencem' : 'Pretas jogam e vencem')}
             </span>
           </div>
 
           <div className="flex items-center gap-3 font-mono text-slate-400">
-            <span>Exercício #{currentPuzzleIndex + 1} de {puzzles.length}</span>
+            <span>{t('Exercício #')}{currentPuzzleIndex + 1} {t('de')} {puzzles.length}</span>
             <span className="text-amber-400 font-semibold">{currentPuzzle.rating} Elo</span>
           </div>
         </div>
@@ -294,11 +294,11 @@ export const TacticalTrainer: React.FC<TacticalTrainerProps> = ({
         <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl flex flex-col gap-3">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <h3 className="text-base font-bold text-slate-100">{currentPuzzle.title}</h3>
+              <h3 className="text-base font-bold text-slate-100">{t(currentPuzzle.title)}</h3>
               <div className="flex items-center gap-2 mt-1 text-xs text-slate-400">
-                <span className="text-amber-300 font-medium">{currentPuzzle.category}</span>
+                <span className="text-amber-300 font-medium">{t(currentPuzzle.category)}</span>
                 <span aria-hidden="true">·</span>
-                <span>{currentPuzzle.difficulty}</span>
+                <span>{t(currentPuzzle.difficulty)}</span>
               </div>
             </div>
 
@@ -330,7 +330,7 @@ export const TacticalTrainer: React.FC<TacticalTrainerProps> = ({
           {puzzleStatus === 'solved' && (
             <div className="p-3 rounded-lg bg-slate-950/70 border border-slate-800 text-xs text-slate-300 leading-relaxed">
               <strong className="text-amber-300 block mb-1">{t('Lição do Treinador:')}</strong>
-              {currentPuzzle.lesson}
+              {t(currentPuzzle.lesson)}
             </div>
           )}
 
@@ -357,7 +357,7 @@ export const TacticalTrainer: React.FC<TacticalTrainerProps> = ({
                   onClick={handleShowSolution}
                   className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 transition-all"
                 >
-                  Ver Solução
+                  {t('Ver Solução')}
                 </button>
               </div>
             ) : (
@@ -374,7 +374,7 @@ export const TacticalTrainer: React.FC<TacticalTrainerProps> = ({
                   onClick={handleShowSolution}
                   className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700 transition-all"
                 >
-                  Desistir & Ver
+                  {t('Desistir & Ver')}
                 </button>
               </div>
             )}
