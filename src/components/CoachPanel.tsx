@@ -70,11 +70,11 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
 
           <div>
             <span className={`text-xs px-2 py-0.5 rounded font-medium border ${badgeColor}`}>
-              {currentMove.qualityLabel}
+              {t(currentMove.qualityLabel)}
             </span>
             {currentMove.blunderCategory && (
               <span className="ml-2 text-xs font-semibold text-slate-200">
-                {currentMove.blunderCategory}
+                {t(currentMove.blunderCategory)}
               </span>
             )}
           </div>
