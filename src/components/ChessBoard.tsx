@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue } from 'framer-motion';
 import { Chess, Square, PieceSymbol } from 'chess.js';
 import { ChessPiece } from './ChessPiece';
 import { BoardArrow, PieceSet } from '../types/chess';
@@ -24,6 +24,7 @@ interface ChessBoardProps {
   boardTheme?: BoardTheme;
   pieceSet?: PieceSet;
   customBasePath?: string;
+  disableAnimations?: boolean;
 }
 
 const FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
@@ -89,34 +90,26 @@ const BoardSquare = React.memo<BoardSquareProps>(({
       onClick={() => onSquareClick(square)}
       className={`relative flex items-center justify-center select-none transition-colors duration-100 ${squareBg}`}
     >
-      {/* Coordenadas do Tabuleiro */}
       {showRankLabel && (
-        <span
-          className={`absolute top-0.5 left-1 text-[10px] font-bold ${textColor} opacity-75 pointer-events-none select-none z-10`}
-        >
+        <span className={`absolute top-0.5 left-1 text-[10px] font-bold ${textColor} opacity-75 pointer-events-none select-none z-10`}>
           {rank}
         </span>
       )}
       {showFileLabel && (
-        <span
-          className={`absolute bottom-0.5 right-1 text-[10px] font-bold ${textColor} opacity-75 pointer-events-none select-none z-10`}
-        >
+        <span className={`absolute bottom-0.5 right-1 text-[10px] font-bold ${textColor} opacity-75 pointer-events-none select-none z-10`}>
           {file}
         </span>
       )}
 
-      {/* Efeito de Rei em Xeque */}
       {isKingInCheck && (
         <div
           className="absolute inset-0 pointer-events-none z-10 animate-pulse"
           style={{
-            background:
-              'radial-gradient(circle at center, rgba(239, 68, 68, 0.95) 0%, rgba(220, 38, 38, 0.7) 45%, rgba(185, 28, 28, 0) 85%)',
+            background: 'radial-gradient(circle at center, rgba(239, 68, 68, 0.95) 0%, rgba(220, 38, 38, 0.7) 45%, rgba(185, 28, 28, 0) 85%)',
           }}
         />
       )}
 
-      {/* Indicador de Movimento Válido */}
       {isValidDest && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
           {hasPiece ? (
@@ -140,21 +133,22 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
   boardTheme,
   pieceSet = 'staunty',
   customBasePath = DEFAULT_BASE_PATH,
+  disableAnimations = false,
 }) => {
   const boardRef = useRef<HTMLDivElement>(null);
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
   const [validMoves, setValidMoves] = useState<Square[]>([]);
   const [promotionPending, setPromotionPending] = useState<{ from: Square; to: Square } | null>(null);
 
-  // Controle de Arraste (Touch & Mouse)
+  // Arraste com MotionValues
   const [dragSquare, setDragSquare] = useState<Square | null>(null);
-  const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null);
+  const dragX = useMotionValue(0);
+  const dragY = useMotionValue(0);
   const dragStartCoord = useRef<{ x: number; y: number } | null>(null);
 
   const displayFiles = useMemo(() => (orientation === 'w' ? FILES : [...FILES].reverse()), [orientation]);
   const displayRanks = useMemo(() => (orientation === 'w' ? RANKS : [...RANKS].reverse()), [orientation]);
 
-  // Paletas de Cores Harmonizadas
   const themes = useMemo(
     () => ({
       staunty: {
@@ -244,7 +238,6 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
   const activeThemeKey = (boardTheme || pieceSet) as keyof typeof themes;
   const currentTheme = themes[activeThemeKey] || themes.staunty;
 
-  // Algoritmo de rastreamento de peças para animações do Framer Motion
   const prevPiecesRef = useRef<AnimatedPiece[]>([]);
 
   const animatedPieces = useMemo(() => {
@@ -276,36 +269,13 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
       }
     }
 
-    // 1. Manter IDs das peças que não se moveram
-    const unassignedCurrent: typeof currentSquares = [];
     currentSquares.forEach((item) => {
-      const exactMatch = prevPiecesRef.current.find(
-        (prev) =>
-          prev.square === item.square &&
-          prev.type === item.type &&
-          prev.color === item.color &&
-          !usedPrevIds.has(prev.id)
-      );
-      if (exactMatch) {
-        usedPrevIds.add(exactMatch.id);
-        newPieces.push({
-          ...exactMatch,
-          colIndex: item.col,
-          rowIndex: item.row,
-        });
-      } else {
-        unassignedCurrent.push(item);
-      }
-    });
-
-    // 2. Associar peças que se moveram (ex: lastMove de 'e2' para 'e4')
-    unassignedCurrent.forEach((item) => {
       let match = prevPiecesRef.current.find(
         (prev) =>
           !usedPrevIds.has(prev.id) &&
           prev.type === item.type &&
           prev.color === item.color &&
-          (lastMove ? prev.square === lastMove.from && item.square === lastMove.to : true)
+          (lastMove ? prev.square === lastMove.from && item.square === lastMove.to : prev.square === item.square)
       );
 
       if (!match) {
@@ -350,7 +320,6 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
       setValidMoves([]);
       setPromotionPending(null);
       setDragSquare(null);
-      setDragPos(null);
     },
     [onMove]
   );
@@ -443,7 +412,8 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
       setValidMoves(legal);
 
       setDragSquare(square);
-      setDragPos({ x: e.clientX, y: e.clientY });
+      dragX.set(e.clientX);
+      dragY.set(e.clientY);
       dragStartCoord.current = { x: e.clientX, y: e.clientY };
 
       if (boardRef.current) {
@@ -452,15 +422,16 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
         } catch {}
       }
     },
-    [interactive, chess]
+    [interactive, chess, dragX, dragY]
   );
 
   const handlePointerMove = useCallback(
     (e: React.PointerEvent) => {
       if (!dragSquare) return;
-      setDragPos({ x: e.clientX, y: e.clientY });
+      dragX.set(e.clientX);
+      dragY.set(e.clientY);
     },
-    [dragSquare]
+    [dragSquare, dragX, dragY]
   );
 
   const handlePointerUp = useCallback(
@@ -482,14 +453,13 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
           executeMove(dragSquare, targetSquare);
         }
       } else if (!isDragMoved) {
-        // Toque rápido: mantém a seleção ativa
+        // Mantém seleção
       } else {
         setSelectedSquare(null);
         setValidMoves([]);
       }
 
       setDragSquare(null);
-      setDragPos(null);
       dragStartCoord.current = null;
     },
     [dragSquare, getSquareFromCoords, validMoves, chess, executeMove]
@@ -497,7 +467,6 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
 
   const handlePointerCancel = useCallback(() => {
     setDragSquare(null);
-    setDragPos(null);
     dragStartCoord.current = null;
   }, []);
 
@@ -553,7 +522,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
       style={{ touchAction: 'none' }}
       className={`relative w-full max-w-[560px] aspect-square rounded-2xl overflow-hidden shadow-2xl border-4 ${currentTheme.borderColor} select-none bg-slate-900 transition-colors duration-200`}
     >
-      {/* 1. Camada do Grid do Tabuleiro (Casas) */}
+      {/* 1. Grid do Tabuleiro */}
       <div className="grid grid-cols-8 grid-rows-8 w-full h-full">
         {displayRanks.map((rank, rIdx) =>
           displayFiles.map((file, fIdx) => {
@@ -587,7 +556,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
         )}
       </div>
 
-      {/* 2. Camada das Peças Animodas (Framer Motion) */}
+      {/* 2. Peças Animadas */}
       <AnimatePresence>
         {animatedPieces.map((p) => {
           const isDraggingThisPiece = dragSquare === p.square;
@@ -597,17 +566,23 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
               key={p.id}
               initial={false}
               animate={{
-                left: `${p.colIndex * 12.5}%`,
-                top: `${p.rowIndex * 12.5}%`,
-                opacity: isDraggingThisPiece ? 0.2 : 1,
-                scale: isDraggingThisPiece ? 0.95 : 1,
+                x: `${p.colIndex * 100}%`,
+                y: `${p.rowIndex * 100}%`,
+                opacity: isDraggingThisPiece ? 0.15 : 1,
               }}
-              exit={{ scale: 0, opacity: 0 }}
-              transition={{
-                type: 'spring',
-                stiffness: 380,
-                damping: 32,
-                mass: 0.8,
+              exit={disableAnimations ? { opacity: 0 } : { scale: 0, opacity: 0 }}
+              transition={
+                disableAnimations
+                  ? { duration: 0 }
+                  : {
+                      duration: 0.18,
+                      ease: [0.2, 0, 0, 1],
+                    }
+              }
+              style={{
+                willChange: 'transform',
+                top: 0,
+                left: 0,
               }}
               onPointerDown={(e) => handlePointerDownPiece(e, p.square)}
               onClick={() => handleSquareClick(p.square)}
@@ -668,13 +643,14 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
         </svg>
       )}
 
-      {/* 4. Elemento de Peça Arrastada (Sombra sob o cursor) */}
-      {dragSquare && dragPos && draggedPieceInfo && (
-        <div
-          className="fixed pointer-events-none z-50 transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 drop-shadow-2xl scale-110 opacity-95 transition-transform"
+      {/* 4. Elemento de Arraste */}
+      {dragSquare && draggedPieceInfo && (
+        <motion.div
+          className="fixed pointer-events-none z-50 transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 drop-shadow-2xl scale-110 opacity-95"
           style={{
-            left: `${dragPos.x}px`,
-            top: `${dragPos.y}px`,
+            x: dragX,
+            y: dragY,
+            willChange: 'transform',
           }}
         >
           <ChessPiece
@@ -683,7 +659,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
             set={pieceSet}
             customBasePath={customBasePath}
           />
-        </div>
+        </motion.div>
       )}
 
       {/* 5. Modal de Promoção */}
