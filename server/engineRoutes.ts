@@ -33,9 +33,10 @@ export function mountEngineRoutes(app: Express) {
 
   app.post('/api/engine/search', rateLimit(Number(process.env.ENGINE_RATE || 20)), async (req, res) => {
     try {
-      const { fen, movetime, depth, multiPV, skill, elo } = req.body ?? {};
+      const { fen, movetime, depth, multiPV, skill, elo, weak } = req.body ?? {};
       if (typeof fen !== 'string' || fen.length > 120) return res.status(400).json({ error: 'fen obrigatória' });
-      const out = await pool.search({ fen, movetime, depth, multiPV, skill, elo });
+      // /search = lance do bot -> prioridade alta (não espera análise do coach)
+      const out = await pool.search({ fen, movetime, depth, multiPV, skill, elo, weak, priority: 'high' });
       res.json(out);
     } catch (e: any) {
       const msg = String(e?.message || e);

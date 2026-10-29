@@ -2,6 +2,7 @@
 import { spawn, ChildProcessWithoutNullStreams } from 'node:child_process';
 import { createInterface } from 'node:readline';
 import { Chess } from 'chess.js';
+import { ENGINE_LIMITS as L } from '../src/data/botLevels';
 
 export interface EngineLine {
   multipv: number;
@@ -18,6 +19,10 @@ export interface SearchRequest {
   multiPV?: number;
   skill?: number;    // 0..20
   elo?: number;      // 1320..3190 (UCI_LimitStrength)
+  /** modo humano: sorteia entre os N melhores lances (ver src/data/botLevels.ts) */
+  weak?: { multiPV: number; temp: number };
+  /** 'high' = lance do bot (fura a fila); 'low' = análise/coach */
+  priority?: 'high' | 'low';
 }
 
 export interface SearchResponse {
@@ -35,12 +40,15 @@ class UciProcess {
   private listeners = new Set<(line: string) => void>();
   name = 'Stockfish';
   ready!: Promise<void>;
+  /** opções UCI já enviadas: só reenvia quando mudam (menos latência por lance) */
+  private opts = new Map<string, string>();
 
   constructor(private path: string, private hashMb: number) {
     this.start();
   }
 
   private start() {
+    this.opts.clear();
     this.proc = spawn(this.path, [], { stdio: ['pipe', 'pipe', 'pipe'] });
     createInterface({ input: this.proc.stdout }).on('line', (l) => {
       this.listeners.forEach((f) => f(l));
@@ -51,6 +59,15 @@ class UciProcess {
 
   send(cmd: string) {
     this.proc.stdin.write(cmd + '\n');
+  }
+
+  /** setoption só se o valor mudou. Retorna true se enviou algo. */
+  setOption(name: string, value: string | number | boolean): boolean {
+    const v = String(value);
+    if (this.opts.get(name) === v) return false;
+    this.opts.set(name, v);
+    this.send(`setoption name ${name} value ${v}`);
+    return true;
   }
 
   waitFor(pred: (l: string) => boolean, timeoutMs: number): Promise<string> {
@@ -79,8 +96,9 @@ class UciProcess {
     await this.waitFor((l) => l === 'uciok', 10_000);
     off();
     if (idLines[0]) this.name = idLines[0];
-    this.send(`setoption name Hash value ${this.hashMb}`);
-    this.send('setoption name Threads value 1');
+    this.setOption('Hash', this.hashMb);
+    this.setOption('Threads', 1);
+    this.send('ucinewgame');
     this.send('isready');
     await this.waitFor((l) => l === 'readyok', 10_000);
   }
@@ -101,7 +119,8 @@ class UciProcess {
 export class EnginePool {
   private workers: UciProcess[] = [];
   private idle: UciProcess[] = [];
-  private queue: Array<() => void> = [];
+  // duas filas: lances do bot ('high') sempre passam na frente da análise ('low')
+  private queues: { high: Array<() => void>; low: Array<() => void> } = { high: [], low: [] };
   readonly maxQueue: number;
 
   constructor(opts: { path: string; size?: number; hashMb?: number; maxQueue?: number }) {
@@ -115,20 +134,20 @@ export class EnginePool {
   }
 
   get size() { return this.workers.length; }
-  get queued() { return this.queue.length; }
+  get queued() { return this.queues.high.length + this.queues.low.length; }
 
   async ready() { await Promise.all(this.workers.map((w) => w.ready)); }
 
-  private acquire(): Promise<UciProcess> {
+  private acquire(priority: 'high' | 'low'): Promise<UciProcess> {
     const w = this.idle.pop();
     if (w) return Promise.resolve(w);
-    if (this.queue.length >= this.maxQueue) return Promise.reject(new Error('fila cheia'));
-    return new Promise((resolve) => this.queue.push(() => resolve(this.idle.pop()!)));
+    if (this.queued >= this.maxQueue) return Promise.reject(new Error('fila cheia'));
+    return new Promise((resolve) => this.queues[priority].push(() => resolve(this.idle.pop()!)));
   }
 
   private release(w: UciProcess) {
     this.idle.push(w);
-    const next = this.queue.shift();
+    const next = this.queues.high.shift() ?? this.queues.low.shift();
     if (next) next();
   }
 
@@ -138,13 +157,16 @@ export class EnginePool {
     try { chess = new Chess(req.fen); } catch { throw new Error('FEN inválida'); }
     if (chess.isGameOver()) throw new Error('partida já terminou');
 
-    const movetime = req.depth ? undefined : clamp(req.movetime ?? 500, 50, 5000);
-    const depth = req.depth ? clamp(req.depth, 1, 30) : undefined;
-    const multiPV = clamp(req.multiPV ?? 1, 1, 5);
-    const elo = req.elo ? clamp(req.elo, 1320, 3190) : undefined;
-    const skill = clamp(req.skill ?? 20, 0, 20);
+    const movetime = clamp(req.movetime ?? (req.depth ? 3000 : 500), ...L.movetime); // com depth, o tempo é só um teto
+    const depth = req.depth ? clamp(req.depth, ...L.depth) : undefined;
+    const weak = req.weak
+      ? { multiPV: clamp(req.weak.multiPV, ...L.multiPV), temp: clamp(req.weak.temp, ...L.temp) }
+      : undefined;
+    const multiPV = weak ? weak.multiPV : clamp(req.multiPV ?? 1, ...L.multiPV);
+    const elo = req.elo && !weak ? clamp(req.elo, ...L.elo) : undefined;
+    const skill = clamp(req.skill ?? 20, ...L.skill);
 
-    const w = await this.acquire();
+    const w = await this.acquire(req.priority ?? 'low');
     const t0 = Date.now();
     try {
       await w.ready;
@@ -163,24 +185,31 @@ export class EnginePool {
         });
       });
 
-      w.send('ucinewgame');
-      w.send(`setoption name MultiPV value ${multiPV}`);
+      // só reenvia opção que mudou; 'isready' só se algo mudou
+      let changed = false;
+      changed = w.setOption('MultiPV', multiPV) || changed;
       if (elo) {
-        w.send('setoption name UCI_LimitStrength value true');
-        w.send(`setoption name UCI_Elo value ${elo}`);
+        changed = w.setOption('UCI_LimitStrength', true) || changed;
+        changed = w.setOption('UCI_Elo', elo) || changed;
       } else {
-        w.send('setoption name UCI_LimitStrength value false');
-        w.send(`setoption name Skill Level value ${skill}`);
+        changed = w.setOption('UCI_LimitStrength', false) || changed;
+        changed = w.setOption('Skill Level', weak ? 20 : skill) || changed; // modo humano: força plena + sorteio
       }
-      w.send('isready');
-      await w.waitFor((l) => l === 'readyok', 5_000);
+      if (changed) {
+        w.send('isready');
+        await w.waitFor((l) => l === 'readyok', 5_000);
+      }
       w.send(`position fen ${req.fen}`);
-      w.send(depth ? `go depth ${depth}` : `go movetime ${movetime}`);
+      // profundidade E tempo juntos: para no que vier primeiro (nunca trava a UI)
+      w.send(depth ? `go depth ${depth} movetime ${movetime}` : `go movetime ${movetime}`);
 
-      const best = await w.waitFor((l) => l.startsWith('bestmove'), (movetime ?? 15_000) + 5_000);
+      const best = await w.waitFor((l) => l.startsWith('bestmove'), movetime + 5_000);
       off();
 
-      const uci = best.split(' ')[1];
+      const sorted = [...lines.values()].sort((a, b) => a.multipv - b.multipv);
+      let uci = best.split(' ')[1];
+      if (weak && sorted.length > 1) uci = pickHuman(sorted, weak.temp) ?? uci;
+
       let san: string | null = null;
       try {
         const mv = chess.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] });
@@ -190,7 +219,7 @@ export class EnginePool {
       return {
         bestMove: uci,
         san,
-        lines: [...lines.values()].sort((a, b) => a.multipv - b.multipv),
+        lines: sorted,
         engine: w.name,
         ms: Date.now() - t0,
       };
@@ -219,7 +248,7 @@ export class EnginePool {
     const after = chess.fen();
     const mover = new Chess(fen).turn();
 
-    const before = await this.search({ fen, ...opts, multiPV: 1 });
+    const before = await this.search({ fen, ...opts, multiPV: 1, priority: 'low' });
     const bestLine = before.lines[0];
     const cpBefore = lineToCp(bestLine); // do ponto de vista de quem joga
 
@@ -231,7 +260,7 @@ export class EnginePool {
     } else if (chess.isGameOver()) {
       cpAfter = 0; // empate/afogamento
     } else {
-      const a = await this.search({ fen: after, ...opts, multiPV: 1 });
+      const a = await this.search({ fen: after, ...opts, multiPV: 1, priority: 'low' });
       cpAfter = -lineToCp(a.lines[0]); // inverte: a busca vem do ponto de vista do adversário
     }
 
@@ -285,6 +314,24 @@ export function lineToCp(l?: EngineLine): number {
 
 /** Curva de chance de vitória (Lichess). cp -> 0..100 */
 export const winPct = (cp: number) => 50 + 50 * (2 / (1 + Math.exp(-0.00368208 * cp)) - 1);
+
+/**
+ * Modo humano: escolhe entre os MultiPV pelo peso exp((chanceVitória - melhor) / temp).
+ * temp baixo ≈ quase sempre o melhor; temp alto ≈ erra bastante (mas só entre lances plausíveis).
+ */
+export function pickHuman(lines: EngineLine[], temp: number): string | undefined {
+  const cand = lines.filter((l) => l.pv.length > 0);
+  if (cand.length === 0) return undefined;
+  const wp = cand.map((l) => winPct(lineToCp(l)));
+  const top = Math.max(...wp);
+  const weights = wp.map((v) => Math.exp((v - top) / temp));
+  let r = Math.random() * weights.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < cand.length; i++) {
+    r -= weights[i];
+    if (r <= 0) return cand[i].pv[0];
+  }
+  return cand[0].pv[0];
+}
 
 function clamp(n: number, lo: number, hi: number) {
   n = Number(n);

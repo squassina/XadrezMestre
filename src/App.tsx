@@ -6,6 +6,7 @@ import {
 } from './types/chess';
 import { analyzeMove, analyzeMoveAsync, getBotMove, evaluateBoard, detectBlunderCategory, BOT_CONFIGS } from './utils/engine';
 import { botMove, analyzeMoveRemote, BOT_ENGINE, warmUp, API_BASE_URL, uciPvToSan, EngineLine } from './utils/remoteEngine';
+import { BOT_PROFILES } from './data/botLevels';
 import { soundEffects } from './utils/sound';
 import { TIME_CONTROLS, DEFAULT_TIME_CONTROL } from './data/timeControls';
 import { TopNav, NavTab } from './components/TopNav';
@@ -358,7 +359,7 @@ export default function App() {
         let planEngine = 'Livro de aberturas';
         let planMs = 0;
         const bookEntry = getOpeningForPosition(fen);
-        const bookMoveObj = canUseOpeningBook(currentBot, currentGame.history().length)
+        const bookMoveObj = currentGame.history().length < BOT_PROFILES[currentBot].bookPly
           ? getBookMove(fen)
           : null;
 

@@ -8,7 +8,7 @@ export function useChessWorker() {
   useEffect(() => {
     // Instancia o Web Worker usando suporte nativo de módulos ES
     workerRef.current = new Worker(
-      new URL('../utils/chess/engine.worker.ts', import.meta.url),
+      new URL('../utils/engine.worker.ts', import.meta.url),
       { type: 'module' }
     );
 

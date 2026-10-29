@@ -1,6 +1,7 @@
 import { Chess, Square, PieceSymbol, Color, Move } from 'chess.js';
 import { AnalyzedMove, BlunderCategory, MoveQuality, BotLevel, BotConfig } from '../types/chess';
 import { getOpeningForPosition, getBookMove, OPENING_BOOK } from '../data/openings';
+import { BOT_PROFILES } from '../data/botLevels';
 
 export { getOpeningForPosition, getBookMove, OPENING_BOOK };
 
@@ -124,7 +125,7 @@ export const BOT_CONFIGS: Record<BotLevel, BotConfig> = {
     id: 'beginner',
     name: 'Sofia Novata',
     title: 'Iniciante',
-    elo: 800,
+    elo: BOT_PROFILES.beginner.elo,
     depth: 1,
     maxQuiescenceDepth: 2,
     randomness: 0.35,
@@ -136,7 +137,7 @@ export const BOT_CONFIGS: Record<BotLevel, BotConfig> = {
     id: 'intermediate',
     name: 'Carlos Estrategista',
     title: 'Intermediário',
-    elo: 1350,
+    elo: BOT_PROFILES.intermediate.elo,
     depth: 2,
     maxQuiescenceDepth: 4,
     randomness: 0.10,
@@ -148,7 +149,7 @@ export const BOT_CONFIGS: Record<BotLevel, BotConfig> = {
     id: 'advanced',
     name: 'Dra. Helena',
     title: 'Avançado',
-    elo: 1750,
+    elo: BOT_PROFILES.advanced.elo,
     depth: 3,
     maxQuiescenceDepth: 6,
     randomness: 0.02,
@@ -160,7 +161,7 @@ export const BOT_CONFIGS: Record<BotLevel, BotConfig> = {
     id: 'master',
     name: 'GM Mikhail',
     title: 'Mestre',
-    elo: 2200,
+    elo: BOT_PROFILES.master.elo,
     depth: 4,
     maxQuiescenceDepth: 8,
     randomness: 0.0,

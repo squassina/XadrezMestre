@@ -1,6 +1,7 @@
 import { Chess } from 'chess.js';
 import type { BotLevel } from '../types/chess';
 import { DIFFICULTY_PROFILES } from './difficulty';
+import { BOT_PROFILES, type EngineProfile } from '../data/botLevels';
 import { searchBestMove } from './search';
 
 // Em produção (GitHub Pages) configure VITE_API_URL sem barra final.
@@ -38,7 +39,7 @@ export function warmUp() {
   fetch(`${API}/api/engine/health`).catch(() => undefined);
 }
 
-export interface BotSettings {
+export interface BotSettings extends EngineProfile {
   movetime: number;
   skill?: number;
   elo?: number;
@@ -51,10 +52,10 @@ export interface BotSettings {
 }
 
 export const BOT_ENGINE: Record<BotLevel, BotSettings> = {
-  beginner:     { movetime: 90,  skill: 0,   fallbackTimeMs: DIFFICULTY_PROFILES.beginner.fallbackTimeMs, fallbackDepth: DIFFICULTY_PROFILES.beginner.fallbackDepth, variety: DIFFICULTY_PROFILES.beginner.variety },
-  intermediate: { movetime: 220, elo: 1350, fallbackTimeMs: DIFFICULTY_PROFILES.intermediate.fallbackTimeMs, fallbackDepth: DIFFICULTY_PROFILES.intermediate.fallbackDepth, variety: DIFFICULTY_PROFILES.intermediate.variety },
-  advanced:     { movetime: 450, elo: 1750, fallbackTimeMs: DIFFICULTY_PROFILES.advanced.fallbackTimeMs, fallbackDepth: DIFFICULTY_PROFILES.advanced.fallbackDepth, variety: DIFFICULTY_PROFILES.advanced.variety },
-  master:       { movetime: 800, elo: 2200, fallbackTimeMs: DIFFICULTY_PROFILES.master.fallbackTimeMs, fallbackDepth: DIFFICULTY_PROFILES.master.fallbackDepth, variety: DIFFICULTY_PROFILES.master.variety },
+  beginner: { ...BOT_PROFILES.beginner.engine, fallbackTimeMs: DIFFICULTY_PROFILES.beginner.fallbackTimeMs, fallbackDepth: DIFFICULTY_PROFILES.beginner.fallbackDepth, variety: DIFFICULTY_PROFILES.beginner.variety },
+  intermediate: { ...BOT_PROFILES.intermediate.engine, fallbackTimeMs: DIFFICULTY_PROFILES.intermediate.fallbackTimeMs, fallbackDepth: DIFFICULTY_PROFILES.intermediate.fallbackDepth, variety: DIFFICULTY_PROFILES.intermediate.variety },
+  advanced: { ...BOT_PROFILES.advanced.engine, fallbackTimeMs: DIFFICULTY_PROFILES.advanced.fallbackTimeMs, fallbackDepth: DIFFICULTY_PROFILES.advanced.fallbackDepth, variety: DIFFICULTY_PROFILES.advanced.variety },
+  master: { ...BOT_PROFILES.master.engine, fallbackTimeMs: DIFFICULTY_PROFILES.master.fallbackTimeMs, fallbackDepth: DIFFICULTY_PROFILES.master.fallbackDepth, variety: DIFFICULTY_PROFILES.master.variety },
 };
 
 /** Exported to allow deterministic tests of fallback selection. */
@@ -91,7 +92,7 @@ export async function botMove(
   fen: string, settings: BotSettings, signal?: AbortSignal,
 ): Promise<{ from: string; to: string; promotion?: string; source: 'stockfish' | 'interno'; lines: EngineLine[]; engine: string; ms: number }> {
   try {
-    const { depth: _depth, fallbackTimeMs: _fallbackTime, fallbackDepth: _fallbackDepth, variety: _variety, maxQuiescenceDepth: _maxQ, ...engineSettings } = settings;
+    const { fallbackTimeMs: _fallbackTime, fallbackDepth: _fallbackDepth, variety: _variety, maxQuiescenceDepth: _maxQ, ...engineSettings } = settings;
     const r = await post<RemoteSearch>('/api/engine/search', { fen, multiPV: 3, ...engineSettings }, Math.max(4_000, settings.movetime + 3_000), signal);
     const chess = new Chess(fen);
     const move = chess.moves({ verbose: true }).find((candidate) =>
