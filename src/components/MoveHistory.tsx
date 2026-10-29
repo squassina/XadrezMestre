@@ -172,7 +172,7 @@ export const MoveHistory: React.FC<MoveHistoryProps> = ({
           <button
             onClick={() => onSelectMove(-1)}
             disabled={currentMoveIndex === -1 || moves.length === 0}
-            title="Início"
+            title={t('Início')}
             className="p-1.5 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed text-slate-300"
           >
             <ChevronFirst className="w-3.5 h-3.5" />
@@ -188,7 +188,7 @@ export const MoveHistory: React.FC<MoveHistoryProps> = ({
           <button
             onClick={() => onSelectMove(Math.min(moves.length - 1, currentMoveIndex + 1))}
             disabled={currentMoveIndex >= moves.length - 1}
-            title="Próximo Lance"
+            title={t('Próximo Lance')}
             className="p-1.5 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed text-slate-300"
           >
             <ChevronRight className="w-3.5 h-3.5" />
@@ -196,7 +196,7 @@ export const MoveHistory: React.FC<MoveHistoryProps> = ({
           <button
             onClick={() => onSelectMove(moves.length - 1)}
             disabled={currentMoveIndex >= moves.length - 1}
-            title="Último Lance"
+            title={t('Último Lance')}
             className="p-1.5 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed text-slate-300"
           >
             <ChevronLast className="w-3.5 h-3.5" />
