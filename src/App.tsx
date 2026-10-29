@@ -791,12 +791,12 @@ export default function App() {
                       <div key={String(line.multipv) + '-' + line.pv.join('-')} className="rounded-lg bg-slate-950/70 border border-slate-800 px-2.5 py-2">
                         <div className="flex items-center justify-between gap-2 mb-1">
                           <span className="text-[10px] font-semibold text-amber-300">{line.multipv === 1 ? t('Plano principal') : t('Alternativa ') + line.multipv}</span>
-                          <span className="text-[10px] text-slate-500">{line.depth ? 'Profundidade ' + line.depth : 'Livro de aberturas'}{line.mate !== undefined ? ' · mate em ' + line.mate : line.cp !== undefined ? ' · avaliação ' + (line.cp / 100).toFixed(2) + ' (lado a jogar)' : ''}</span>
+                          <span className="text-[10px] text-slate-500" >{line.depth ? t('Profundidade') + ' ' + line.depth : t('Livro de aberturas')}{line.mate !== undefined ? ' · ' + t('mate in') + ' ' + line.mate : line.cp !== undefined ? ' · ' + t('avaliação') + ' ' + (line.cp / 100).toFixed(2) + ' (' + t('lado a jogar') + ')' : ''}</span>
                         </div>
                         <p className="font-mono text-[11px] leading-relaxed text-slate-200 break-words">{line.pv.join(' ') || t('Variante indisponível')}</p>
                       </div>
                     ))}
-                    <p className="text-[10px] text-slate-500">São variantes calculadas pelo motor, não uma explicação de intenção humana. O resultado pode mudar com mais tempo de busca ou após a resposta do jogador.</p>
+                    <p className="text-[10px] text-slate-500">{t('São variantes calculadas pelo motor, não uma explicação de intenção humana. O resultado pode mudar com mais tempo de busca ou após a resposta do jogador.')}</p>
                   </div>
                 )}
               </section>
@@ -805,14 +805,14 @@ export default function App() {
               <div className="flex items-center justify-between w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs">
                 <div className="flex items-center gap-2.5">
                   <div className="w-7 h-7 rounded-lg bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-300 font-bold text-xs">
-                    VOCÊ
+                    {t('VOCÊ')}
                   </div>
                   <div>
                     <div className="font-bold text-slate-100">
                       {t('Você')} ({playerColor === 'w' ? t('Brancas') : t('Pretas')})
                     </div>
                     <div className="text-[10px] text-slate-400 font-mono">
-                      Rating Tático: {playerStats.tacticalRating} Elo
+                      {t('Rating Tático:')} {playerStats.tacticalRating} Elo
                     </div>
                   </div>
                 </div>
