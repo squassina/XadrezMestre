@@ -8,6 +8,11 @@ type TranslationContextValue = {
 };
 
 const translations: Record<string, string> = {
+  'Todos os Temas': 'All Topics',
+  '🎯 Seus Pontos Fracos': '🎯 Your Weaknesses',
+  'Garfos': 'Forks',
+  'Cravadas': 'Pins',
+  'Melhor:': 'Best:',
   'Treino em Partida': 'Game Training',
   'Exercícios Táticos': 'Tactical Puzzles',
   'Análise de Erros': 'Mistake Analysis',
