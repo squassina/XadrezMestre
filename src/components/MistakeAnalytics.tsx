@@ -18,7 +18,7 @@ export const MistakeAnalytics: React.FC<MistakeAnalyticsProps> = ({
   onSelectPuzzleCategory,
   onResetStats,
 }) => {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const [aiReport, setAiReport] = useState<{
     summary?: string;
     strengths?: string[];
@@ -58,6 +58,7 @@ export const MistakeAnalytics: React.FC<MistakeAnalyticsProps> = ({
           stats: playerStats,
           errorCounts: mistakeCounts,
           totalGames: playerStats.gamesPlayed,
+          language,
         }),
       });
       const data = await res.json();
