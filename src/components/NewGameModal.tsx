@@ -3,6 +3,7 @@ import { BotLevel, TimeControl, PieceSet } from '../types/chess';
 import { BOT_CONFIGS } from '../utils/engine';
 import { TIME_CONTROLS, DEFAULT_TIME_CONTROL } from '../data/timeControls';
 import { ChessPiece } from './ChessPiece';
+import { useI18n } from '../i18n';
 import { Sparkles, X, Clock, Zap, Flame, Timer, Infinity, Palette } from 'lucide-react';
 
 interface NewGameModalProps {
@@ -42,6 +43,7 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
   currentMaxQuiescenceDepth = 6,
   gameInProgress = false,
 }) => {
+  const { t } = useI18n();
   const dialogRef = useRef<HTMLDivElement>(null);
   const [selectedBot, setSelectedBot] = useState<BotLevel>(currentBotLevel);
   const [selectedColor, setSelectedColor] = useState<'w' | 'b' | 'random'>(currentPlayerColor);
@@ -136,13 +138,13 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
         <div className="flex items-center justify-between border-b border-slate-800 pb-3">
           <div className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-amber-400" />
-            <h2 id="new-game-modal-title" className="text-base font-bold">{mode === 'bot' ? 'Trocar Bot' : 'Configurar Partida com Treinador'}</h2>
+            <h2 id="new-game-modal-title" className="text-base font-bold">{mode === 'bot' ? t('Trocar Bot') : t('Configurar Partida com Treinador')}</h2>
           </div>
           <button
             type="button"
             onClick={onClose}
             className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
-            aria-label="Fechar modal"
+            aria-label={t('Fechar modal')}
           >
             <X className="w-4 h-4" />
           </button>
@@ -155,7 +157,7 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
           <div className="flex items-center justify-between">
             <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
               <Clock className="w-3.5 h-3.5 text-amber-400" />
-              <span>Controle de Tempo (Relógio):</span>
+              <span>{t('Controle de Tempo (Relógio):')}</span>
             </label>
             <span className="text-[11px] font-mono text-amber-400 font-bold">
               {selectedTimeControl.description}
@@ -198,7 +200,7 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
 
         {/* Bot Level Selection */}
         <div className="space-y-2 pt-1 border-t border-slate-800">
-          <label className="text-xs font-semibold text-slate-300">Escolha seu Oponente de Treino:</label>
+          <label className="text-xs font-semibold text-slate-300">{t('Escolha seu Oponente de Treino:')}</label>
           <div className="grid grid-cols-2 gap-2">
             {botList.map((lvl) => {
               const cfg = BOT_CONFIGS[lvl];
@@ -247,9 +249,9 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
             className="w-full accent-amber-500"
             aria-describedby="quiescence-depth-help"
           />
-          <div className="flex justify-between text-[10px] text-slate-500"><span>Mais fácil / rápido</span><span>Mais difícil / tático</span></div>
+          <div className="flex justify-between text-[10px] text-slate-500"><span>{t('Mais fácil / rápido')}</span><span>{t('Mais difícil / tático')}</span></div>
           <p id="quiescence-depth-help" className="text-[11px] text-slate-400 leading-relaxed">
-            Ajusta a busca tática adicional. O motor interno respeita este limite; com Stockfish remoto, o valor também ajusta o nível de força solicitado, enquanto o Stockfish controla sua própria busca quiescente.
+            {t('Ajusta a busca tática adicional. O motor interno respeita este limite; com Stockfish remoto, o valor também ajusta o nível de força solicitado, enquanto o Stockfish controla sua própria busca quiescente.')}
           </p>
         </div>
 
@@ -257,7 +259,7 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
           <>
         {/* Color Choice */}
         <div className="space-y-2 pt-1 border-t border-slate-800">
-          <label className="text-xs font-semibold text-slate-300">Suas Peças:</label>
+          <label className="text-xs font-semibold text-slate-300">{t('Suas Peças:')}</label>
           <div className="grid grid-cols-3 gap-2">
             <button
               type="button"
@@ -270,7 +272,7 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
               }`}
             >
               <div className="w-3.5 h-3.5 rounded-full bg-white border border-slate-400" />
-              <span>Brancas</span>
+              <span>{t('Brancas')}</span>
             </button>
 
             <button
@@ -284,7 +286,7 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
               }`}
             >
               <div className="w-3.5 h-3.5 rounded-full bg-slate-950 border border-slate-600" />
-              <span>Pretas</span>
+              <span>{t('Pretas')}</span>
             </button>
 
             <button
@@ -297,7 +299,7 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
                   : 'bg-slate-950/60 border-slate-800 text-slate-300 hover:bg-slate-800'
               }`}
             >
-              <span>🎲 Aleatório</span>
+              <span>{t('🎲 Aleatório')}</span>
             </button>
           </div>
         </div>
@@ -312,7 +314,7 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
           <div className="flex items-center justify-between">
             <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
               <Palette className="w-3.5 h-3.5 text-amber-400" />
-              <span>Estilo Visual das Peças:</span>
+              <span>{t('Estilo Visual das Peças:')}</span>
             </label>
             <span className="text-[11px] font-mono text-amber-400 font-semibold">
               {{ staunty: 'Staunty', cburnett: 'Cburnett', merida: 'Merida', alpha: 'Alpha' }[selectedPieceSet]}
@@ -372,7 +374,7 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
           <>
         {/* Coach Settings */}
         <div className="space-y-2 pt-1 border-t border-slate-800">
-          <label className="text-xs font-semibold text-slate-300">Assistência do Treinador:</label>
+          <label className="text-xs font-semibold text-slate-300">{t('Assistência do Treinador:')}</label>
           <div className="space-y-2">
             <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
               <input
@@ -381,7 +383,7 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
                 onChange={(e) => setCoachInterruption(e.target.checked)}
                 className="rounded border-slate-700 bg-slate-800 text-amber-500 focus:ring-amber-500"
               />
-              <span>Feedback Imediato ao Cometer Gafes / Peças Penduradas</span>
+              <span>{t('Feedback Imediato ao Cometer Gafes / Peças Penduradas')}</span>
             </label>
 
             <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
@@ -391,7 +393,7 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
                 onChange={(e) => setShowEvalBar(e.target.checked)}
                 className="rounded border-slate-700 bg-slate-800 text-amber-500 focus:ring-amber-500"
               />
-              <span>Exibir Barra de Avaliação em Tempo Real</span>
+              <span>{t('Exibir Barra de Avaliação em Tempo Real')}</span>
             </label>
           </div>
         </div>
