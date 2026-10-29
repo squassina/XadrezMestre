@@ -22,7 +22,6 @@ import { ChessPrinciples } from './components/ChessPrinciples';
 import { NewGameModal } from './components/NewGameModal';
 import { GameReportModal } from './components/GameReportModal';
 import { useI18n } from './i18n';
-import { useI18n } from './i18n';
 import {
   RotateCcw, Sparkles, Trophy, Lightbulb, RefreshCw, Flag,
   HelpCircle, ChevronRight, User, Bot, AlertTriangle, Timer, Zap, Flame, Clock, BarChart2
@@ -51,7 +50,8 @@ const DEFAULT_STATS: PlayerStats = {
   recentMistakes: [],
 };
 
-export default function App() {\n  const { t } = useI18n();
+export default function App() {
+  const { t } = useI18n();
   const [activeTab, setActiveTab] = useState<NavTab>('game');
   const [boardTheme, setBoardTheme] = useState<BoardTheme>(() => {
     try {
