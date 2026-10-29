@@ -6,6 +6,7 @@ on:
     paths:
       - 'server.ts'
       - 'server/**'
+      - 'src/data/botLevels.ts'
       - 'Dockerfile'
       - 'package.json'
       - 'package-lock.json'
@@ -35,13 +36,19 @@ jobs:
       - run: npm ci
       - run: npm run lint
 
+      - name: Avisar quando o deploy estiver sem configuração GCP
+        if: ${{ vars.GCP_WIF_PROVIDER == '' || vars.GCP_SERVICE_ACCOUNT == '' || vars.GCP_REGION == '' }}
+        run: echo "::warning::Backend lint passou, mas o deploy foi ignorado: configure GCP_WIF_PROVIDER, GCP_SERVICE_ACCOUNT e GCP_REGION nas variáveis do repositório."
+
       - name: Autenticar no Google Cloud
+        if: ${{ vars.GCP_WIF_PROVIDER != '' && vars.GCP_SERVICE_ACCOUNT != '' && vars.GCP_REGION != '' }}
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
           service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
 
       - name: Build (Dockerfile) e deploy
+        if: ${{ vars.GCP_WIF_PROVIDER != '' && vars.GCP_SERVICE_ACCOUNT != '' && vars.GCP_REGION != '' }}
         uses: google-github-actions/deploy-cloudrun@v2
         with:
           service: xadrezmestre-api
