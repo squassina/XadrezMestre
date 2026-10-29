@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { BotLevel, TimeControl } from '../types/chess';
+import { BotLevel, TimeControl, PieceSet } from '../types/chess';
 import { BOT_CONFIGS } from '../utils/engine';
 import { TIME_CONTROLS, DEFAULT_TIME_CONTROL } from '../data/timeControls';
-import { Sparkles, X, Clock, Zap, Flame, Timer, Infinity } from 'lucide-react';
+import { ChessPiece } from './ChessPiece';
+import { Sparkles, X, Clock, Zap, Flame, Timer, Infinity, Palette } from 'lucide-react';
 
 interface NewGameModalProps {
   isOpen: boolean;
@@ -13,9 +14,11 @@ interface NewGameModalProps {
     coachInterruption: boolean;
     showEvalBar: boolean;
     timeControl: TimeControl;
+    pieceSet?: PieceSet;
   }) => void;
   currentBotLevel: BotLevel;
   currentTimeControl: TimeControl;
+  currentPieceSet?: PieceSet;
 }
 
 export const NewGameModal: React.FC<NewGameModalProps> = ({
@@ -24,10 +27,12 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
   onStartGame,
   currentBotLevel,
   currentTimeControl,
+  currentPieceSet = 'cburnett',
 }) => {
   const [selectedBot, setSelectedBot] = useState<BotLevel>(currentBotLevel);
   const [selectedColor, setSelectedColor] = useState<'w' | 'b' | 'random'>('w');
   const [selectedTimeControl, setSelectedTimeControl] = useState<TimeControl>(currentTimeControl || DEFAULT_TIME_CONTROL);
+  const [selectedPieceSet, setSelectedPieceSet] = useState<PieceSet>(currentPieceSet);
   const [coachInterruption, setCoachInterruption] = useState(true);
   const [showEvalBar, setShowEvalBar] = useState(true);
 
@@ -41,6 +46,7 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
       coachInterruption,
       showEvalBar,
       timeControl: selectedTimeControl,
+      pieceSet: selectedPieceSet,
     });
     onClose();
   };
@@ -171,6 +177,57 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
               }`}
             >
               <span>🎲 Aleatório</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Piece Set Selection: cburnett vs Modern-Minimalist */}
+        <div className="space-y-2 pt-1 border-t border-slate-800">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+              <Palette className="w-3.5 h-3.5 text-amber-400" />
+              <span>Estilo Visual das Peças:</span>
+            </label>
+            <span className="text-[11px] font-mono text-amber-400 font-semibold">
+              {selectedPieceSet === 'modern-minimalist' ? 'Modern-Minimalist' : 'cburnett'}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setSelectedPieceSet('cburnett')}
+              className={`p-2.5 rounded-xl border text-left flex items-center gap-3 transition-all ${
+                selectedPieceSet === 'cburnett'
+                  ? 'bg-amber-500/15 border-amber-500/60 ring-1 ring-amber-500/40 text-amber-200'
+                  : 'bg-slate-950/60 border-slate-800 hover:bg-slate-800/60 text-slate-300'
+              }`}
+            >
+              <div className="w-9 h-9 shrink-0 flex items-center justify-center p-0.5 bg-slate-900 rounded-lg border border-slate-800">
+                <ChessPiece type="n" color="w" set="cburnett" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs font-bold text-slate-100">cburnett</span>
+                <span className="text-[10px] text-slate-400">Padrão de torneio clássico</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSelectedPieceSet('modern-minimalist')}
+              className={`p-2.5 rounded-xl border text-left flex items-center gap-3 transition-all ${
+                selectedPieceSet === 'modern-minimalist'
+                  ? 'bg-amber-500/15 border-amber-500/60 ring-1 ring-amber-500/40 text-amber-200'
+                  : 'bg-slate-950/60 border-slate-800 hover:bg-slate-800/60 text-slate-300'
+              }`}
+            >
+              <div className="w-9 h-9 shrink-0 flex items-center justify-center p-0.5 bg-slate-900 rounded-lg border border-slate-800">
+                <ChessPiece type="n" color="w" set="modern-minimalist" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs font-bold text-slate-100">Modern-Minimalist</span>
+                <span className="text-[10px] text-slate-400">Vetoriais limpas, sem bordas</span>
+              </div>
             </button>
           </div>
         </div>

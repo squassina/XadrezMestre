@@ -245,13 +245,18 @@ export default function App() {
     coachInterruption: newCoach,
     showEvalBar: newEval,
     timeControl: newTimeControl,
+    pieceSet: newPieceSet,
   }: {
     botLevel: BotLevel;
     playerColor: 'w' | 'b';
     coachInterruption: boolean;
     showEvalBar: boolean;
     timeControl: TimeControl;
+    pieceSet?: PieceSet;
   }) => {
+    if (newPieceSet) {
+      handleSelectPieceSet(newPieceSet);
+    }
     const newChess = new Chess();
     setChess(newChess);
     setMoves([]);
@@ -904,6 +909,7 @@ export default function App() {
         onStartGame={handleStartNewGame}
         currentBotLevel={botLevel}
         currentTimeControl={timeControl}
+        currentPieceSet={pieceSet}
       />
 
       {/* Game Precision & Analysis Report Modal */}
