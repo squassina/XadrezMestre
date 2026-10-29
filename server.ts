@@ -208,6 +208,7 @@ Return an educational diagnosis as strict JSON:
     return res.json(parsed);
   } catch (err) {
     console.error('Error in diagnostics:', err);
+    const language = req.body?.language ?? 'pt-BR';
     return res.json(language === 'en' ? {
       summary: 'Keep practicing tactical puzzles to strengthen pattern recognition.', strengths: ['Dedication to training'], weaknesses: ['Awareness of undefended pieces'], recommendations: ['Daily exercises calculating forcing moves']
     } : {
