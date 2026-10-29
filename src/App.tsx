@@ -724,7 +724,7 @@ export default function App() {
                       {isBotThinking ? (
                         <span className="text-amber-400 font-medium animate-pulse">{t('Calculando lance...')}</span>
                       ) : (
-                        <span>{playerColor === 'w' ? 'Pretas' : 'Brancas'} · {botConfig.title}</span>
+                        <span>{playerColor === 'w' ? t('Pretas') : t('Brancas')} · {t(botConfig.title)}</span>
                       )}
                     </div>
                   </div>
@@ -777,23 +777,23 @@ export default function App() {
                 <div className="flex items-center justify-between gap-3 mb-2">
                   <h3 className="text-xs font-bold text-slate-100 flex items-center gap-2">
                     <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                    Como o computador está pensando
+                    {t('Como o computador está pensando')}
                   </h3>
                   {thinkingPlan?.status === 'thinking' && <span className="text-[10px] text-amber-300 animate-pulse">{t('Calculando variantes…')}</span>}
                   {thinkingPlan?.status === 'ready' && <span className="text-[10px] text-slate-500">{thinkingPlan.engine}{thinkingPlan.ms ? ' · ' + thinkingPlan.ms + ' ms' : ''}</span>}
                 </div>
-                {!thinkingPlan && <p className="text-[11px] text-slate-400">Quando chegar a vez do computador, mostraremos as principais linhas calculadas e alternativas consideradas.</p>}
-                {thinkingPlan?.status === 'thinking' && <p className="text-[11px] text-slate-400">O motor está comparando lances candidatos, respostas e posições futuras. As variantes aparecem quando a busca terminar.</p>}
+                {!thinkingPlan && <p className="text-[11px] text-slate-400">{t('Quando chegar a vez do computador, mostraremos as principais linhas calculadas e alternativas consideradas.')}</p>}
+                {thinkingPlan?.status === 'thinking' && <p className="text-[11px] text-slate-400">{t('O motor está comparando lances candidatos, respostas e posições futuras. As variantes aparecem quando a busca terminar.')}</p>}
                 {thinkingPlan?.status === 'ready' && thinkingPlan.lines.length === 0 && <p className="text-[11px] text-slate-400">{t('O motor não retornou variantes detalhadas para esta posição.')}</p>}
                 {thinkingPlan?.status === 'ready' && thinkingPlan.lines.length > 0 && (
                   <div className="space-y-2">
                     {thinkingPlan.lines.slice(0, 3).map((line) => (
                       <div key={String(line.multipv) + '-' + line.pv.join('-')} className="rounded-lg bg-slate-950/70 border border-slate-800 px-2.5 py-2">
                         <div className="flex items-center justify-between gap-2 mb-1">
-                          <span className="text-[10px] font-semibold text-amber-300">{line.multipv === 1 ? 'Plano principal' : 'Alternativa ' + line.multipv}</span>
+                          <span className="text-[10px] font-semibold text-amber-300">{line.multipv === 1 ? t('Plano principal') : t('Alternativa ') + line.multipv}</span>
                           <span className="text-[10px] text-slate-500">{line.depth ? 'Profundidade ' + line.depth : 'Livro de aberturas'}{line.mate !== undefined ? ' · mate em ' + line.mate : line.cp !== undefined ? ' · avaliação ' + (line.cp / 100).toFixed(2) + ' (lado a jogar)' : ''}</span>
                         </div>
-                        <p className="font-mono text-[11px] leading-relaxed text-slate-200 break-words">{line.pv.join(' ') || 'Variante indisponível'}</p>
+                        <p className="font-mono text-[11px] leading-relaxed text-slate-200 break-words">{line.pv.join(' ') || t('Variante indisponível')}</p>
                       </div>
                     ))}
                     <p className="text-[10px] text-slate-500">São variantes calculadas pelo motor, não uma explicação de intenção humana. O resultado pode mudar com mais tempo de busca ou após a resposta do jogador.</p>
@@ -809,7 +809,7 @@ export default function App() {
                   </div>
                   <div>
                     <div className="font-bold text-slate-100">
-                      Você ({playerColor === 'w' ? 'Brancas' : 'Pretas'})
+                      {t('Você')} ({playerColor === 'w' ? t('Brancas') : t('Pretas')})
                     </div>
                     <div className="text-[10px] text-slate-400 font-mono">
                       Rating Tático: {playerStats.tacticalRating} Elo
@@ -863,7 +863,7 @@ export default function App() {
               {gameOver.isOver && (
                 <div className="p-4 rounded-xl bg-slate-900 border border-amber-500/50 shadow-xl flex flex-col gap-2.5 text-center">
                   <Trophy className="w-7 h-7 text-amber-400 mx-auto" />
-                  <h3 className="text-base font-bold text-slate-100">{gameOver.message}</h3>
+                  <h3 className="text-base font-bold text-slate-100">{gameOver.message ? t(gameOver.message) : ''}</h3>
                   <p className="text-xs text-slate-400">
                     A partida foi finalizada! Veja o gráfico de precisão lance a lance e momentos críticos.
                   </p>
@@ -982,7 +982,7 @@ export default function App() {
         botName={BOT_CONFIGS[botLevel].name}
         botElo={BOT_CONFIGS[botLevel].elo}
         timeControl={timeControl.name}
-        gameOverMessage={gameOver.message}
+        gameOverMessage={gameOver.message ? t(gameOver.message) : ''}
         winner={gameOver.winner}
         onReviewMove={(moveIdx) => {
           handleSelectHistoryMove(moveIdx);
