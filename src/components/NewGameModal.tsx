@@ -101,7 +101,7 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
   if (!isOpen) return null;
 
   const handleStart = () => {
-    if (gameInProgress && !window.confirm('Iniciar outra partida descartará a partida atual e seu histórico. Deseja continuar?')) {
+    if (gameInProgress && !window.confirm(t('Iniciar outra partida descartará a partida atual e seu histórico. Deseja continuar?'))) {
       return;
     }
     const finalColor: 'w' | 'b' = mode === 'bot'
@@ -160,7 +160,7 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
               <span>{t('Controle de Tempo (Relógio):')}</span>
             </label>
             <span className="text-[11px] font-mono text-amber-400 font-bold">
-              {selectedTimeControl.description}
+              {t(selectedTimeControl.description)}
             </span>
           </div>
 
@@ -188,7 +188,7 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
                     {icon}
                     <span className="font-mono font-bold text-xs">{tc.name}</span>
                   </div>
-                  <span className="text-[10px] text-slate-400 capitalize">{tc.type}</span>
+                  <span className="text-[10px] text-slate-400 capitalize">{t(tc.type)}</span>
                 </button>
               );
             })}
@@ -221,8 +221,8 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
                     <span className="text-lg">{cfg.avatar}</span>
                     <span className="text-xs font-mono font-bold text-amber-400">{cfg.elo} Elo</span>
                   </div>
-                  <div className="font-semibold text-xs text-slate-100">{cfg.name}</div>
-                  <div className="text-[10px] text-slate-400 leading-tight">{cfg.description}</div>
+                  <div className="font-semibold text-xs text-slate-100">{t(cfg.name)}</div>
+                  <div className="text-[10px] text-slate-400 leading-tight">{t(cfg.description)}</div>
                 </button>
               );
             })}
