@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45" width="100%" height="100%">
+                <defs>
+                    <linearGradient id="stauntyIvory" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#FFFDF7"/>
+                        <stop offset="50%" stop-color="#F3E2C4"/>
+                        <stop offset="100%" stop-color="#CFA268"/>
+                    </linearGradient>
+                    <linearGradient id="stauntyEbony" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#542E16"/>
+                        <stop offset="55%" stop-color="#2D170B"/>
+                        <stop offset="100%" stop-color="#120804"/>
+                    </linearGradient>
+                    <filter id="staunty3dShadow" x="-15%" y="-15%" width="130%" height="130%">
+                        <feDropShadow dx="1.2" dy="2" stdDeviation="1.2" flood-color="#000000" flood-opacity="0.45"/>
+                    </filter>
+                </defs>
+            <g filter="url(#staunty3dShadow)">
+                    <rect x="11.5" y="37" width="22" height="4" rx="1.5" fill="url(#stauntyIvory)" stroke="#7C5228" stroke-width="1.5"/>
+                    <path d="M13.5 37 C14.5 31, 15.5 28, 17 28 H28 C29.5 28, 30.5 31, 31.5 37 Z" fill="url(#stauntyIvory)" stroke="#7C5228" stroke-width="1.5"/>
+                    <path d="M22.5 9.5 C16.5 9.5, 15 17, 17 28 H28 C30 17, 28.5 9.5, 22.5 9.5 Z" fill="url(#stauntyIvory)" stroke="#7C5228" stroke-width="1.5"/>
+                    <circle cx="22.5" cy="7" r="2.2" fill="url(#stauntyIvory)" stroke="#7C5228" stroke-width="1.5"/>
+                    <path d="M20.5 15.5 L25 19.5" stroke="#7C5228" stroke-width="1.8" stroke-linecap="round"/>
+                </g></svg>

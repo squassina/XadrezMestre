@@ -39,7 +39,7 @@ export const TopNav: React.FC<TopNavProps> = ({
           </span>
         </div>
 
-        {/* Zone 2: Navigation Links (Single-Line, clean hover underlines) */}
+        {/* Zone 2: Navigation Links */}
         <nav className="hidden md:flex items-center gap-6 text-xs font-medium text-slate-400">
           <button
             onClick={() => onSelectTab('game')}
@@ -75,7 +75,7 @@ export const TopNav: React.FC<TopNavProps> = ({
           </button>
         </nav>
 
-        {/* Zone 3: Selectors (Pieces & Board) + Action */}
+        {/* Zone 3: Selectors & Actions */}
         <div className="flex items-center gap-2 shrink-0">
           {/* Piece Set Selector */}
           <select
@@ -85,6 +85,7 @@ export const TopNav: React.FC<TopNavProps> = ({
             className="text-xs bg-slate-900 border border-slate-700 hover:border-slate-600 text-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer shadow-xs"
             title="Escolha o estilo das peças"
           >
+            <option value="custom">Peças: SVGs Personalizados (Custom)</option>
             <option value="cburnett">Peças: cburnett (Padrão)</option>
             <option value="modern-minimalist">Peças: Modern-Minimalist (Clean)</option>
             <option value="staunty">Peças: Staunty (Madeira & Marfim)</option>

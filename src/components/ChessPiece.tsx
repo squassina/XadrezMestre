@@ -1,13 +1,18 @@
 import React from 'react';
 import { PieceSymbol, Color } from 'chess.js';
 
-export type PieceSet = 'staunty' | 'modern-minimalist' | 'merida' | 'alpha' | 'cburnett';
+export type PieceSet = 'staunty' | 'modern-minimalist' | 'merida' | 'alpha' | 'cburnett' | 'custom';
 
 interface ChessPieceProps {
   type: PieceSymbol;
   color: Color;
   set?: PieceSet;
   className?: string;
+  /**
+   * Caminho customizado para imagens quando set="custom".
+   * Exemplo: "/pieces" (busca "/pieces/wP.svg") ou uma função geradora de URL.
+   */
+  customBasePath?: string;
 }
 
 export const ChessPiece: React.FC<ChessPieceProps> = React.memo(({
@@ -15,8 +20,27 @@ export const ChessPiece: React.FC<ChessPieceProps> = React.memo(({
   color,
   set = 'staunty',
   className = 'w-full h-full',
+  customBasePath = '/pieces',
 }) => {
   const isWhite = color === 'w';
+
+  // -------------------------------------------------------------
+  // 0. CUSTOM: Carrega arquivos SVG externos (ex: /public/pieces/wP.svg)
+  // -------------------------------------------------------------
+  if (set === 'custom') {
+    const colorPrefix = isWhite ? 'w' : 'b';
+    const pieceCode = type.toUpperCase();
+    const src = `${customBasePath}/${colorPrefix}${pieceCode}.svg`;
+
+    return (
+      <img
+        src={src}
+        alt={`${isWhite ? 'White' : 'Black'} ${type}`}
+        className={`select-none pointer-events-none object-contain ${className}`}
+        draggable={false}
+      />
+    );
+  }
 
   // -------------------------------------------------------------
   // 1. STAUNTY: Realista com Gradientes e Polimento estilo Madeira / Marfim

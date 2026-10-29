@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45" width="100%" height="100%">
+                <defs>
+                    <linearGradient id="alphaWhiteGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stop-color="#FFFFFF"/>
+                        <stop offset="100%" stop-color="#E0F2FE"/>
+                    </linearGradient>
+                    <linearGradient id="alphaDarkGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stop-color="#0F172A"/>
+                        <stop offset="100%" stop-color="#0B132B"/>
+                    </linearGradient>
+                    <filter id="alphaGlow">
+                        <feGaussianBlur stdDeviation="0.8" result="coloredBlur"/>
+                        <feMerge>
+                            <feMergeNode in="coloredBlur"/>
+                            <feMergeNode in="SourceGraphic"/>
+                        </feMerge>
+                    </filter>
+                </defs>
+            <g>
+                    <rect x="11" y="37" width="23" height="4" rx="1" fill="url(#alphaDarkGrad)" stroke="#00E5FF" stroke-width="1.8"/>
+                    <path d="M13 37 L17 25 L13 17 L19 7 L26 5 L31 9 L27 15 L32 37 Z" fill="url(#alphaDarkGrad)" stroke="#00E5FF" stroke-width="1.8" stroke-linejoin="round"/>
+                    <polygon points="17,14 21,12 20,16" fill="#00F0FF" filter="url(#alphaGlow)"/>
+                    <path d="M23 9 L27 15 L28 24" stroke="#00F0FF" stroke-width="1.5" fill="none"/>
+                </g></svg>

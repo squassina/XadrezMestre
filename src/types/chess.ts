@@ -1,18 +1,18 @@
-export type MoveQuality = 
-  | 'brilliant' 
-  | 'best' 
-  | 'good' 
-  | 'inaccuracy' 
-  | 'mistake' 
-  | 'blunder' 
+export type MoveQuality =
+  | 'brilliant'
+  | 'best'
+  | 'good'
+  | 'inaccuracy'
+  | 'mistake'
+  | 'blunder'
   | 'missed_win';
 
-export type BlunderCategory = 
-  | 'Peça Pendurada' 
-  | 'Cravada Sofrida' 
-  | 'Garfo Sofrido' 
-  | 'Rei Vulnerável' 
-  | 'Oportunidade Tática Perdida' 
+export type BlunderCategory =
+  | 'Peça Pendurada'
+  | 'Cravada Sofrida'
+  | 'Garfo Sofrido'
+  | 'Rei Vulnerável'
+  | 'Oportunidade Tática Perdida'
   | 'Desenvolvimento Lento'
   | 'Erro Posicional';
 
@@ -113,7 +113,5 @@ export interface TimeControl {
   description: string;
 }
 
-export type PieceSet = 'cburnett' | 'modern-minimalist' | 'staunty' | 'merida' | 'alpha';
+export type PieceSet = 'staunty' | 'modern-minimalist' | 'merida' | 'alpha' | 'cburnett' | 'custom';
 export type BoardTheme = 'emerald' | 'wood' | 'tournament' | 'marble';
-
-

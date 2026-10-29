@@ -14,6 +14,7 @@ interface ChessBoardProps {
   lastMove?: { from: string; to: string } | null;
   boardTheme?: BoardTheme;
   pieceSet?: PieceSet;
+  customBasePath?: string;
 }
 
 const FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
@@ -31,6 +32,7 @@ interface BoardSquareProps {
   isKingInCheck: boolean;
   isDraggingThisPiece: boolean;
   pieceSet?: PieceSet;
+  customBasePath?: string;
   showRankLabel: boolean;
   showFileLabel: boolean;
   themeStyle: {
@@ -58,6 +60,7 @@ const BoardSquare = React.memo<BoardSquareProps>(({
   isKingInCheck,
   isDraggingThisPiece,
   pieceSet = 'staunty',
+  customBasePath,
   showRankLabel,
   showFileLabel,
   themeStyle,
@@ -105,7 +108,7 @@ const BoardSquare = React.memo<BoardSquareProps>(({
             isDraggingThisPiece ? 'opacity-20 scale-95' : 'hover:scale-105 active:scale-95'
           }`}
         >
-          <ChessPiece type={piece.type} color={piece.color} set={pieceSet} />
+          <ChessPiece type={piece.type} color={piece.color} set={pieceSet} customBasePath={customBasePath} />
         </div>
       )}
 
@@ -132,6 +135,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
   lastMove = null,
   boardTheme,
   pieceSet = 'staunty',
+  customBasePath = '/pieces',
 }) => {
   const boardRef = useRef<HTMLDivElement>(null);
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
@@ -146,10 +150,9 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
   const displayFiles = useMemo(() => (orientation === 'w' ? FILES : [...FILES].reverse()), [orientation]);
   const displayRanks = useMemo(() => (orientation === 'w' ? RANKS : [...RANKS].reverse()), [orientation]);
 
-  // Paletas de Cores Harmonizadas com cada Estilo de Peça
+  // Paletas de Cores Harmonizadas
   const themes = useMemo(
     () => ({
-      // 1. Staunty (Madeira Nobre e Marfim)
       staunty: {
         light: 'bg-[#f0d9b5]',
         dark: 'bg-[#b58863]',
@@ -160,7 +163,6 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
         destDot: 'bg-amber-400/90',
         borderColor: 'border-[#422a1d]',
       },
-      // 2. Modern-Minimalist (Grafite / Slate Limpo)
       'modern-minimalist': {
         light: 'bg-[#e2e8f0]',
         dark: 'bg-[#475569]',
@@ -171,7 +173,6 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
         destDot: 'bg-sky-400/90',
         borderColor: 'border-[#1e293b]',
       },
-      // 3. Merida (Gravura Clássica Europeia)
       merida: {
         light: 'bg-[#f1f5f9]',
         dark: 'bg-[#64748b]',
@@ -182,7 +183,6 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
         destDot: 'bg-slate-300/90',
         borderColor: 'border-[#0f172a]',
       },
-      // 4. Alpha (Contemporâneo Geométrico Ciano)
       alpha: {
         light: 'bg-[#1e293b]',
         dark: 'bg-[#0f172a]',
@@ -193,7 +193,6 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
         destDot: 'bg-cyan-400/90',
         borderColor: 'border-[#0284c7]/60',
       },
-      // 5. Emerald / CBurnett (Padrão Lichess / Torneios)
       emerald: {
         light: 'bg-[#eeeed2]',
         dark: 'bg-[#769656]',
@@ -238,7 +237,6 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
     []
   );
 
-  // Sincroniza automaticamente a cor do tabuleiro com o conjunto de peças selecionado se `boardTheme` não for especificado
   const activeThemeKey = (boardTheme || pieceSet) as keyof typeof themes;
   const currentTheme = themes[activeThemeKey] || themes.staunty;
 
@@ -256,7 +254,6 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
     [onMove]
   );
 
-  // Converte coordenadas em pixels no tabuleiro para um Square do chess.js
   const getSquareFromCoords = useCallback(
     (clientX: number, clientY: number): Square | null => {
       if (!boardRef.current) return null;
@@ -284,7 +281,6 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
     [displayFiles, displayRanks]
   );
 
-  // Lógica para clique nas casas
   const handleSquareClick = useCallback(
     (square: Square) => {
       if (!interactive) return;
@@ -335,7 +331,6 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
     [interactive, promotionPending, selectedSquare, chess, validMoves, executeMove]
   );
 
-  // Eventos de Ponteiro (Mouse / Touch)
   const handlePointerDownPiece = useCallback(
     (e: React.PointerEvent, square: Square) => {
       if (!interactive) return;
@@ -386,7 +381,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
           executeMove(dragSquare, targetSquare);
         }
       } else if (!isDragMoved) {
-        // Apenas um toque/clique: mantém selecionado
+        // Toque rápido: mantém seleção
       } else {
         setSelectedSquare(null);
         setValidMoves([]);
@@ -405,7 +400,6 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
     dragStartCoord.current = null;
   }, []);
 
-  // Identifica Rei em Xeque
   const checkSquare = useMemo(() => {
     if (!chess.inCheck()) return null;
     const turn = chess.turn();
@@ -421,7 +415,6 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
     return null;
   }, [chess.fen()]);
 
-  // Posição de setas SVG
   const getSquareCenterPercent = useCallback(
     (square: string) => {
       const file = square.charAt(0);
@@ -436,7 +429,6 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
     [displayFiles, displayRanks]
   );
 
-  // Mapeamento otimizado das peças no tabuleiro
   const boardMatrix = useMemo(() => {
     const map: Record<Square, { type: PieceSymbol; color: 'w' | 'b' } | null> = {} as any;
     displayRanks.forEach((rank) => {
@@ -486,6 +478,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
                 isKingInCheck={isKingInCheck}
                 isDraggingThisPiece={isDraggingThisPiece}
                 pieceSet={pieceSet}
+                customBasePath={customBasePath}
                 showRankLabel={fIdx === 0}
                 showFileLabel={rIdx === 7}
                 themeStyle={currentTheme}
@@ -497,7 +490,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
         )}
       </div>
 
-      {/* Camada de Setas SVG */}
+      {/* Setas SVG */}
       {arrows.length > 0 && (
         <svg className="absolute inset-0 w-full h-full pointer-events-none z-30" viewBox="0 0 100 100">
           <defs>
@@ -541,7 +534,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
         </svg>
       )}
 
-      {/* Peça Sombra / Fantasma Durante o Arraste */}
+      {/* Sombra Durante Arraste */}
       {dragSquare && dragPos && draggedPieceInfo && (
         <div
           className="fixed pointer-events-none z-50 transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 drop-shadow-2xl scale-110 opacity-95 transition-transform"
@@ -550,11 +543,16 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
             top: `${dragPos.y}px`,
           }}
         >
-          <ChessPiece type={draggedPieceInfo.type} color={draggedPieceInfo.color} set={pieceSet} />
+          <ChessPiece
+            type={draggedPieceInfo.type}
+            color={draggedPieceInfo.color}
+            set={pieceSet}
+            customBasePath={customBasePath}
+          />
         </div>
       )}
 
-      {/* Modal de Promoção do Peão */}
+      {/* Modal de Promoção */}
       {promotionPending && (
         <div className="absolute inset-0 bg-black/75 backdrop-blur-xs flex items-center justify-center z-50 p-4">
           <div className="bg-slate-900 border border-slate-700 p-4 rounded-xl shadow-2xl flex flex-col items-center gap-3">
@@ -566,7 +564,12 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
                   onClick={() => executeMove(promotionPending.from, promotionPending.to, pType)}
                   className="w-14 h-14 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg flex items-center justify-center p-2 transition-all hover:scale-105"
                 >
-                  <ChessPiece type={pType} color={chess.turn()} set={pieceSet} />
+                  <ChessPiece
+                    type={pType}
+                    color={chess.turn()}
+                    set={pieceSet}
+                    customBasePath={customBasePath}
+                  />
                 </button>
               ))}
             </div>
