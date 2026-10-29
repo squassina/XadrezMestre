@@ -80,7 +80,7 @@ export const OpeningBookPanel: React.FC<OpeningBookPanelProps> = ({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="font-mono font-bold text-amber-300 text-sm">{m.san}</span>
-                    {m.name && <span className="text-slate-300 font-medium text-[11px]">{m.name}</span>}
+                    {m.name && <span className="text-slate-300 font-medium text-[11px]">{t(m.name)}</span>}
                   </div>
                   <span className="text-[11px] font-mono text-slate-400 font-semibold">{pct}%</span>
                 </div>
@@ -91,7 +91,7 @@ export const OpeningBookPanel: React.FC<OpeningBookPanelProps> = ({
                 </div>
 
                 {m.comment && (
-                  <p className="text-[10px] text-slate-400 leading-tight mt-0.5">{m.comment}</p>
+                  <p className="text-[10px] text-slate-400 leading-tight mt-0.5">{t(m.comment)}</p>
                 )}
               </div>
             );
