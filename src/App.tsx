@@ -25,7 +25,6 @@ import {
   RotateCcw, Sparkles, Trophy, Lightbulb, RefreshCw, Flag,
   HelpCircle, ChevronRight, User, Bot, AlertTriangle, Timer, Zap, Flame, Clock, BarChart2
 } from 'lucide-react';
-import confetti from 'canvas-confetti';
 
 const STORAGE_KEY = 'xadrez_mestre_stats_v1';
 
@@ -183,7 +182,6 @@ export default function App() {
     const winner = isPlayerFlagged ? 'bot' : 'player';
 
     if (winner === 'player') {
-      confetti({ particleCount: 70, spread: 70, origin: { y: 0.6 } });
     }
 
     setGameOver({
@@ -289,7 +287,6 @@ export default function App() {
       const winner = lastPlayerColor === playerColor ? 'player' : 'bot';
       soundEffects.playVictory();
       if (winner === 'player') {
-        confetti({ particleCount: 70, spread: 70, origin: { y: 0.6 } });
       }
 
       setGameOver({
