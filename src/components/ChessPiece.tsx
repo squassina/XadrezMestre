@@ -3,15 +3,14 @@ import { PieceSymbol, Color } from 'chess.js';
 
 export type PieceSet = 'staunty' | 'modern-minimalist' | 'merida' | 'alpha' | 'cburnett' | 'custom';
 
+// Caminho base dinâmico considerando a base do Vite (ex: /XadrezMestre/pieces)
+const DEFAULT_BASE_PATH = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/pieces`;
+
 interface ChessPieceProps {
   type: PieceSymbol;
   color: Color;
   set?: PieceSet;
   className?: string;
-  /**
-   * Caminho customizado para imagens quando set="custom".
-   * Exemplo: "/pieces" (busca "/pieces/wP.svg") ou uma função geradora de URL.
-   */
   customBasePath?: string;
 }
 
@@ -20,17 +19,18 @@ export const ChessPiece: React.FC<ChessPieceProps> = React.memo(({
   color,
   set = 'staunty',
   className = 'w-full h-full',
-  customBasePath = '/pieces',
+  customBasePath = DEFAULT_BASE_PATH,
 }) => {
   const isWhite = color === 'w';
 
   // -------------------------------------------------------------
-  // 0. CUSTOM: Carrega arquivos SVG externos (ex: /public/pieces/wP.svg)
+  // 0. CUSTOM: Carrega arquivos SVG externos respeitando a URL base
   // -------------------------------------------------------------
   if (set === 'custom') {
     const colorPrefix = isWhite ? 'w' : 'b';
     const pieceCode = type.toUpperCase();
-    const src = `${customBasePath}/${colorPrefix}${pieceCode}.svg`;
+    const cleanBasePath = customBasePath.replace(/\/$/, '');
+    const src = `${cleanBasePath}/${colorPrefix}${pieceCode}.svg`;
 
     return (
       <img
@@ -41,7 +41,6 @@ export const ChessPiece: React.FC<ChessPieceProps> = React.memo(({
       />
     );
   }
-
   // -------------------------------------------------------------
   // 1. STAUNTY: Realista com Gradientes e Polimento estilo Madeira / Marfim
   // -------------------------------------------------------------

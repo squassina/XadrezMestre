@@ -19,6 +19,7 @@ interface ChessBoardProps {
 
 const FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 const RANKS = ['8', '7', '6', '5', '4', '3', '2', '1'];
+const DEFAULT_BASE_PATH = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/pieces`;
 
 interface BoardSquareProps {
   square: Square;
@@ -135,7 +136,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
   lastMove = null,
   boardTheme,
   pieceSet = 'staunty',
-  customBasePath = '/pieces',
+  customBasePath = DEFAULT_BASE_PATH,
 }) => {
   const boardRef = useRef<HTMLDivElement>(null);
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
