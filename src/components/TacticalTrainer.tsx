@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Chess, Square } from 'chess.js';
 import { TacticalPuzzle, PlayerStats, BlunderCategory, BoardArrow, PieceSet, BoardTheme } from '../types/chess';
+import { useI18n } from '../i18n';
 import { INITIAL_PUZZLES, getPersonalizedPuzzles } from '../data/puzzles';
 import { ChessBoard } from './ChessBoard';
 import { soundEffects } from '../utils/sound';
