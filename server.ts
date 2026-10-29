@@ -94,7 +94,7 @@ app.post('/api/coach/explain', async (req, res) => {
 
     if (!ai) {
       // Return instant heuristic explanation
-      const fallback = generateFallbackExplanation(blunderCategory || 'Imprecisão', san, bestSan, evalDiff);
+      const fallback = generateFallbackExplanation(blunderCategory || 'Imprecisão', san, bestSan, evalDiff, language);
       return res.json({ ...fallback, isAiGenerated: false });
     }
 
@@ -143,7 +143,7 @@ Return immediate, constructive feedback as strict JSON:
   } catch (error) {
     console.error('Error generating coach feedback:', error);
     const { san, bestSan, blunderCategory } = req.body;
-    const fallback = generateFallbackExplanation(blunderCategory || 'Imprecisão', san || '', bestSan || '');
+    const fallback = generateFallbackExplanation(blunderCategory || 'Imprecisão', san || '', bestSan || '', undefined, language);
     return res.json({ ...fallback, isAiGenerated: false });
   }
 });
