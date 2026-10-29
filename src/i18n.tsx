@@ -238,6 +238,23 @@ const translations: Record<string, string> = {
   "Empate por Material Insuficiente": "Draw by insufficient material",
   "Quando chegar a vez do computador, mostraremos as principais linhas calculadas e alternativas consideradas.": "When it is the computer’s turn, we will show the main calculated lines and alternatives considered.",
   "O motor está comparando lances candidatos, respostas e posições futuras. As variantes aparecem quando a busca terminar.": "The engine is comparing candidate moves, responses, and future positions. Variations will appear when the search finishes.",
+  "Peça Pendurada": "Hanging Piece",
+  "Garfo Sofrido": "Fork Allowed",
+  "Cravada Sofrida": "Pin Allowed",
+  "Rei Vulnerável": "Vulnerable King",
+  "Oportunidade Tática Perdida": "Missed Tactical Opportunity",
+  "Desenvolvimento Lento": "Slow Development",
+  "Antes de cada lance, confira se todas as suas peças têm defensores ativos e se o destino é seguro.": "Before every move, check that all your pieces are defended and the destination square is safe.",
+  "Fique atento ao posicionamento de cavalos adversários e peões que possam atacar duas peças ao mesmo tempo.": "Watch for enemy knights and pawns that can attack two pieces at once.",
+  "Desate peças cravadas antes de abrir linhas; evite alinhar sua dama ou rei na mesma linha do bispo/torre inimiga.": "Unpin pieces before opening lines; avoid placing your queen or king on the same line as an enemy bishop or rook.",
+  "Priorize o roque nos primeiros 10 a 12 lances para proteger seu rei e conectar as torres.": "Prioritize castling in the first 10–12 moves to protect your king and connect your rooks.",
+  "Sempre calcule a trilogia forçada: Xeques, Capturas e Ameaças diretas antes de lances passivos.": "Always calculate the forcing trio—checks, captures, and direct threats—before passive moves.",
+  "Desenvolva cavalos e bispos antes de mover a mesma peça duas vezes na abertura.": "Develop knights and bishops before moving the same piece twice in the opening.",
+  "Melhor Lance": "Best Move",
+  "Bom": "Good",
+  "Imprecisão": "Inaccuracy",
+  "Erro": "Mistake",
+  "Gafe (Capivara)": "Blunder",
 };
 
 const I18nContext = createContext<TranslationContextValue | null>(null);
