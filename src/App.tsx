@@ -553,7 +553,7 @@ export default function App() {
             fen: chessBefore.fen(),
             movePlayed: testMove.san,
             bestMove: analyzed.bestMoveSan || 'Melhor lance',
-            explanation: t('Você jogou') + ' ' + testMove.san + ', ' + t('permitindo desvantagem tática em relação a') + ' ' + analyzed.bestMoveSan + '.',
+            explanation: language === 'en' ? `You played ${testMove.san}, allowing a tactical disadvantage compared with ${analyzed.bestMoveSan}.` : t('Você jogou') + ' ' + testMove.san + ', ' + t('permitindo desvantagem tática em relação a') + ' ' + analyzed.bestMoveSan + '.',
           };
 
           updateStats({
