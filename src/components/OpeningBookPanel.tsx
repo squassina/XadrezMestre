@@ -47,20 +47,20 @@ export const OpeningBookPanel: React.FC<OpeningBookPanelProps> = ({
               <span className="text-[10px] font-mono font-bold text-sky-400 px-1 py-0.2 rounded bg-sky-950/60 border border-sky-800/60">
                 {opening.eco}
               </span>
-              <h4 className="text-xs font-bold text-slate-100">{opening.name}</h4>
+              <h4 className="text-xs font-bold text-slate-100">{t(opening.name)}</h4>
             </div>
           </div>
         </div>
 
         <span className="text-[10px] font-mono text-emerald-400 font-semibold px-2 py-0.5 rounded-full bg-emerald-950/50 border border-emerald-800/40">
-          Linha Teórica
+          {t('Linha Teórica')}
         </span>
       </div>
 
       {/* Strategic Plan */}
       {opening.plan && (
         <p className="text-[11px] text-slate-300 leading-relaxed italic">
-          <strong className="text-slate-200 not-italic">{t('Plano:')}</strong> {opening.plan}
+          <strong className="text-slate-200 not-italic">{t('Plano:')}</strong> {t(opening.plan)}
         </p>
       )}
 
