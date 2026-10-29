@@ -6,7 +6,8 @@ interface ChessPrinciplesProps {
   onPracticeCategory: (category: string) => void;
 }
 
-export const ChessPrinciples: React.FC<ChessPrinciplesProps> = ({ onPracticeCategory }) => {\n  const { t } = useI18n();
+export const ChessPrinciples: React.FC<ChessPrinciplesProps> = ({ onPracticeCategory }) => {
+  const { t } = useI18n();
   const principles = [
     {
       id: 'cca',
