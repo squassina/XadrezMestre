@@ -141,7 +141,7 @@ export const MistakeAnalytics: React.FC<MistakeAnalyticsProps> = ({
                       <div className="flex items-center justify-between text-xs">
                         <div className="flex items-center gap-1.5 font-medium text-slate-200">
                           {mistakeIcons[category] || <AlertTriangle className="w-4 h-4 text-amber-400" />}
-                          <span>{category}</span>
+                          <span>{t(category)}</span>
                         </div>
                         <div className="flex items-center gap-2 font-mono text-slate-400">
                           <span>{count} ocorrências</span>
@@ -159,7 +159,7 @@ export const MistakeAnalytics: React.FC<MistakeAnalyticsProps> = ({
 
                       {/* Targeted tip & Action */}
                       <div className="flex items-center justify-between text-[11px] text-slate-400 pt-0.5">
-                        <span className="truncate max-w-[260px] text-slate-400/90">{mistakeTips[category] || ''}</span>
+                        <span className="truncate max-w-[260px] text-slate-400/90">{t(mistakeTips[category] || '')}</span>
                         <button
                           onClick={() => onSelectPuzzleCategory(category)}
                           className="text-amber-400 hover:text-amber-300 font-medium shrink-0 ml-2 hover:underline"
@@ -246,7 +246,7 @@ export const MistakeAnalytics: React.FC<MistakeAnalyticsProps> = ({
                 <div className="flex items-center justify-between">
                   <span className="font-semibold text-rose-400 flex items-center gap-1">
                     <AlertTriangle className="w-3.5 h-3.5" />
-                    {m.category}
+                    {t(m.category)}
                   </span>
                   <span className="text-[10px] text-slate-500">{m.date}</span>
                 </div>
