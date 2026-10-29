@@ -114,5 +114,5 @@ export interface TimeControl {
   description: string;
 }
 
-export type PieceSet = 'staunty' | 'modern' | 'merida' | 'alpha' | 'cburnett';
+export type PieceSet = 'staunty' | 'merida' | 'alpha' | 'cburnett';
 export type BoardTheme = 'emerald' | 'wood' | 'tournament' | 'marble';

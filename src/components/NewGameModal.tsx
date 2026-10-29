@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BotLevel, TimeControl, PieceSet } from '../types/chess';
 import { BOT_CONFIGS } from '../utils/engine';
 import { TIME_CONTROLS, DEFAULT_TIME_CONTROL } from '../data/timeControls';
@@ -31,15 +31,51 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
 }) => {
   const [selectedBot, setSelectedBot] = useState<BotLevel>(currentBotLevel);
   const [selectedColor, setSelectedColor] = useState<'w' | 'b' | 'random'>('w');
-  const [selectedTimeControl, setSelectedTimeControl] = useState<TimeControl>(currentTimeControl || DEFAULT_TIME_CONTROL);
+  const [selectedTimeControl, setSelectedTimeControl] = useState<TimeControl>(
+    currentTimeControl || DEFAULT_TIME_CONTROL
+  );
   const [selectedPieceSet, setSelectedPieceSet] = useState<PieceSet>(currentPieceSet);
   const [coachInterruption, setCoachInterruption] = useState(true);
   const [showEvalBar, setShowEvalBar] = useState(true);
 
+  // Sincroniza o estado interno com as props ao abrir o modal
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedBot(currentBotLevel);
+      setSelectedTimeControl(currentTimeControl || DEFAULT_TIME_CONTROL);
+      setSelectedPieceSet(currentPieceSet || 'cburnett');
+    }
+  }, [isOpen, currentBotLevel, currentTimeControl, currentPieceSet]);
+
+  // Manipulador da tecla ESC
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
+  // Manipulador de clique no backdrop
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
   if (!isOpen) return null;
 
   const handleStart = () => {
-    let finalColor: 'w' | 'b' = selectedColor === 'random' ? (Math.random() < 0.5 ? 'w' : 'b') : selectedColor;
+    const finalColor: 'w' | 'b' =
+      selectedColor === 'random' ? (Math.random() < 0.5 ? 'w' : 'b') : selectedColor;
     onStartGame({
       botLevel: selectedBot,
       playerColor: finalColor,
@@ -54,8 +90,16 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
   const botList: BotLevel[] = ['beginner', 'intermediate', 'advanced', 'master'];
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-5 shadow-2xl flex flex-col gap-4 text-slate-100 my-8 max-h-[90vh] overflow-y-auto">
+    <div
+      onClick={handleBackdropClick}
+      className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto cursor-pointer"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-5 shadow-2xl flex flex-col gap-4 text-slate-100 my-8 max-h-[90vh] overflow-y-auto cursor-default"
+      >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-800 pb-3">
           <div className="flex items-center gap-2">
@@ -63,8 +107,10 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
             <h2 className="text-base font-bold">Configurar Partida com Treinador</h2>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-200"
+            className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors"
+            aria-label="Fechar modal"
           >
             <X className="w-4 h-4" />
           </button>
@@ -92,6 +138,7 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
 
               return (
                 <button
+                  type="button"
                   key={tc.id}
                   onClick={() => setSelectedTimeControl(tc)}
                   className={`p-2 rounded-xl border text-center flex flex-col items-center justify-center gap-1 transition-all ${
@@ -120,11 +167,12 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
               const isSelected = selectedBot === lvl;
               return (
                 <button
+                  type="button"
                   key={lvl}
                   onClick={() => setSelectedBot(lvl)}
                   className={`p-3 rounded-xl border text-left flex flex-col gap-1 transition-all ${
                     isSelected
-                      ? 'bg-amber-500/10 border-amber-500/50 shadow-xs ring-1 ring-amber-500/40'
+                      ? 'bg-amber-500/10 border-amber-500/50 shadow-sm ring-1 ring-amber-500/40'
                       : 'bg-slate-950/60 border-slate-800 hover:bg-slate-800/60'
                   }`}
                 >
@@ -145,6 +193,7 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
           <label className="text-xs font-semibold text-slate-300">Suas Peças:</label>
           <div className="grid grid-cols-3 gap-2">
             <button
+              type="button"
               onClick={() => setSelectedColor('w')}
               className={`py-2 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
                 selectedColor === 'w'
@@ -157,6 +206,7 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
             </button>
 
             <button
+              type="button"
               onClick={() => setSelectedColor('b')}
               className={`py-2 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
                 selectedColor === 'b'
@@ -169,6 +219,7 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
             </button>
 
             <button
+              type="button"
               onClick={() => setSelectedColor('random')}
               className={`py-2 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
                 selectedColor === 'random'
@@ -181,7 +232,7 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
           </div>
         </div>
 
-        {/* Piece Set Selection: cburnett vs Modern */}
+        {/* Piece Set Selection */}
         <div className="space-y-2 pt-1 border-t border-slate-800">
           <div className="flex items-center justify-between">
             <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
@@ -189,7 +240,7 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
               <span>Estilo Visual das Peças:</span>
             </label>
             <span className="text-[11px] font-mono text-amber-400 font-semibold">
-              {selectedPieceSet === 'modern' ? 'Modern' : 'cburnett'}
+              {selectedPieceSet === 'alpha' ? 'Alpha' : 'cburnett'}
             </span>
           </div>
 
@@ -214,19 +265,19 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
 
             <button
               type="button"
-              onClick={() => setSelectedPieceSet('modern')}
+              onClick={() => setSelectedPieceSet('alpha')}
               className={`p-2.5 rounded-xl border text-left flex items-center gap-3 transition-all ${
-                selectedPieceSet === 'modern'
+                selectedPieceSet === 'alpha'
                   ? 'bg-amber-500/15 border-amber-500/60 ring-1 ring-amber-500/40 text-amber-200'
                   : 'bg-slate-950/60 border-slate-800 hover:bg-slate-800/60 text-slate-300'
               }`}
             >
               <div className="w-9 h-9 shrink-0 flex items-center justify-center p-0.5 bg-slate-900 rounded-lg border border-slate-800">
-                <ChessPiece type="n" color="w" set="modern" />
+                <ChessPiece type="n" color="w" set="alpha" />
               </div>
               <div className="flex flex-col">
-                <span className="text-xs font-bold text-slate-100">Modern-Minimalist</span>
-                <span className="text-[10px] text-slate-400">Vetoriais limpas, sem bordas</span>
+                <span className="text-xs font-bold text-slate-100">Alpha</span>
+                <span className="text-[10px] text-slate-400">Estilo moderno estilizado</span>
               </div>
             </button>
           </div>
@@ -261,12 +312,14 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
         {/* Footer CTAs */}
         <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
           <button
+            type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium"
+            className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition-colors"
           >
             Cancelar
           </button>
           <button
+            type="button"
             onClick={handleStart}
             className="px-5 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold shadow-md transition-all active:scale-95"
           >
