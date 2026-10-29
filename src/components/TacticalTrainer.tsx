@@ -374,7 +374,7 @@ export const TacticalTrainer: React.FC<TacticalTrainerProps> = ({
                   onClick={handleShowSolution}
                   className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700 transition-all"
                 >
-                  Desistir & Ver
+                  {t('Desistir & Ver')}
                 </button>
               </div>
             )}
